@@ -25,3 +25,15 @@ export const adminGuard: CanActivateFn = () => {
   router.navigate(['/']);
   return false;
 };
+
+export const sellerGuard: CanActivateFn = () => {
+  const authService = inject(AuthService);
+  const router = inject(Router);
+
+  if (authService.isAuthenticated() && (authService.isSeller() || authService.isAdmin())) {
+    return true;
+  }
+
+  router.navigate(['/']);
+  return false;
+};

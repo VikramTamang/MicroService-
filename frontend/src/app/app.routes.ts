@@ -1,5 +1,5 @@
 import { Routes } from '@angular/router';
-import { authGuard, adminGuard } from './guards/auth.guard';
+import { authGuard, adminGuard, sellerGuard } from './guards/auth.guard';
 
 export const routes: Routes = [
   {
@@ -12,13 +12,16 @@ export const routes: Routes = [
   },
   {
     path: 'checkout',
-    canActivate: [authGuard],
     loadComponent: () => import('./components/checkout/checkout.component').then(m => m.CheckoutComponent)
   },
   {
     path: 'my-orders',
-    canActivate: [authGuard],
     loadComponent: () => import('./components/my-orders/my-orders.component').then(m => m.MyOrdersComponent)
+  },
+  {
+    path: 'seller',
+    canActivate: [sellerGuard],
+    loadComponent: () => import('./components/seller/seller-dashboard.component').then(m => m.SellerDashboardComponent)
   },
   {
     path: 'admin',

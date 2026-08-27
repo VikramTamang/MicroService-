@@ -60,7 +60,7 @@ public class UserController {
 
     @GetMapping("/{id}")
     @Operation(summary = "Get user by ID (Internal / Admin)")
-    public ResponseEntity<ApiResponse<UserDto>> getUserById(@PathVariable Long id) {
+    public ResponseEntity<ApiResponse<UserDto>> getUserById(@PathVariable("id") Long id) {
         UserDto userDto = userService.getUserById(id);
         return ResponseEntity.ok(ApiResponse.success(userDto, "User retrieved successfully"));
     }

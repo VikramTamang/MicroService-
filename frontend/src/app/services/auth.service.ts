@@ -22,6 +22,8 @@ export class AuthService {
 
   isAuthenticated = computed(() => !!this.token());
   isAdmin = computed(() => this.currentUser()?.role === 'ROLE_ADMIN');
+  isSeller = computed(() => this.currentUser()?.role === 'ROLE_SELLER');
+  sellerProfile = computed(() => this.currentUser()?.sellerProfile || null);
   userFullName = computed(() => {
     const u = this.currentUser();
     return u ? `${u.firstName} ${u.lastName}` : '';

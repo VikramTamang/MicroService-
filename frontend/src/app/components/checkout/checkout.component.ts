@@ -5,7 +5,7 @@ import { Router, RouterLink } from '@angular/router';
 import { CartService } from '../../services/cart.service';
 import { OrderService } from '../../services/order.service';
 import { AuthService } from '../../services/auth.service';
-import { CreateOrderRequest, Order } from '../../models/order.model';
+import { CreateOrderRequest, ParentOrder } from '../../models/order.model';
 
 @Component({
   selector: 'app-checkout',
@@ -23,31 +23,29 @@ import { CreateOrderRequest, Order } from '../../models/order.model';
           </div>
 
           <div class="space-y-2">
-            <span class="text-xs font-semibold text-emerald-400 uppercase tracking-widest">Order Placed Successfully</span>
+            <span class="text-xs font-semibold text-emerald-400 uppercase tracking-widest">Marketplace Order Confirmed</span>
             <h1 class="text-3xl font-extrabold text-white font-['Outfit']">Thank you for your order!</h1>
-            <p class="text-xs text-slate-400">Your microservices order was processed and stock has been automatically reserved.</p>
+            <p class="text-xs text-slate-400">Your order has been split into independent shipments per merchant.</p>
           </div>
 
-          <div class="p-4 rounded-2xl bg-slate-900/90 border border-slate-800 max-w-md mx-auto space-y-2">
-            <div class="flex justify-between text-xs">
-              <span class="text-slate-400">Tracking Number:</span>
-              <span class="font-mono font-bold text-emerald-400">{{ confirmedOrder()?.trackingNumber }}</span>
+          <div class="p-5 rounded-2xl bg-slate-900/90 border border-slate-800 max-w-md mx-auto space-y-3 text-left">
+            <div class="flex justify-between text-xs border-b border-slate-800 pb-2">
+              <span class="text-slate-400">Order ID:</span>
+              <span class="font-mono font-bold text-emerald-400">{{ confirmedOrder()?.orderNumber }}</span>
             </div>
             <div class="flex justify-between text-xs">
               <span class="text-slate-400">Total Amount:</span>
               <span class="font-bold text-white">\${{ confirmedOrder()?.totalAmount?.toFixed(2) }}</span>
             </div>
             <div class="flex justify-between text-xs">
-              <span class="text-slate-400">Status:</span>
-              <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
-                {{ confirmedOrder()?.status }}
-              </span>
+              <span class="text-slate-400">Merchant Shipments:</span>
+              <span class="font-semibold text-slate-200">{{ confirmedOrder()?.subOrders?.length || 1 }} split sub-orders</span>
             </div>
           </div>
 
           <div class="flex justify-center space-x-4 pt-4">
             <a routerLink="/my-orders" class="px-6 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs transition-all shadow-lg shadow-emerald-500/20">
-              View My Orders
+              Track My Orders
             </a>
             <a routerLink="/" class="px-6 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-300 font-semibold text-xs border border-slate-800 transition-colors">
               Continue Shopping
@@ -58,16 +56,13 @@ import { CreateOrderRequest, Order } from '../../models/order.model';
         <!-- Checkout Form -->
         <div class="space-y-6">
           <div class="border-b border-slate-800 pb-4">
-            <h1 class="text-3xl font-extrabold font-['Outfit'] text-white">Checkout</h1>
-            <p class="text-xs text-slate-400 mt-1">Complete your delivery and payment details to finalize your order.</p>
+            <h1 class="text-3xl font-extrabold font-['Outfit'] text-white">Multi-Seller Checkout</h1>
+            <p class="text-xs text-slate-400 mt-1">Items from different sellers will be split into independent shipments automatically.</p>
           </div>
 
           @if (errorMessage()) {
             <div class="p-4 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-400 text-xs flex items-center space-x-2">
-              <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-              <span>{{ errorMessage() }}</span>
+              <span>⚠️ {{ errorMessage() }}</span>
             </div>
           }
 
@@ -76,7 +71,7 @@ import { CreateOrderRequest, Order } from '../../models/order.model';
             <div class="lg:col-span-2 glass-card rounded-2xl p-6 border border-slate-800 space-y-6">
               <h3 class="text-base font-bold text-white flex items-center space-x-2">
                 <span class="w-6 h-6 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-xs font-bold">1</span>
-                <span>Shipping Address</span>
+                <span>Shipping Destination</span>
               </h3>
 
               <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
@@ -96,10 +91,6 @@ import { CreateOrderRequest, Order } from '../../models/order.model';
                   <label class="font-medium text-slate-300">Phone Number</label>
                   <input type="text" [(ngModel)]="customerPhone" placeholder="+1 (555) 019-2834" class="w-full p-2.5 bg-slate-900 border border-slate-800 rounded-xl text-slate-200 focus:outline-none focus:border-emerald-500" />
                 </div>
-                <div class="sm:col-span-2 space-y-1.5">
-                  <label class="font-medium text-slate-300">Order Notes (Optional)</label>
-                  <textarea [(ngModel)]="notes" rows="2" placeholder="Gate access code, delivery instructions..." class="w-full p-2.5 bg-slate-900 border border-slate-800 rounded-xl text-slate-200 focus:outline-none focus:border-emerald-500"></textarea>
-                </div>
               </div>
 
               <h3 class="text-base font-bold text-white flex items-center space-x-2 pt-4 border-t border-slate-800">
@@ -114,7 +105,7 @@ import { CreateOrderRequest, Order } from '../../models/order.model';
                 </label>
                 <label class="p-3 rounded-xl border border-slate-800 bg-slate-900/50 flex items-center space-x-3 cursor-pointer">
                   <input type="radio" name="payment" value="CASH_ON_DELIVERY" [(ngModel)]="paymentMethod" class="text-emerald-500" />
-                  <span class="text-xs font-semibold text-slate-300">Pay on Delivery</span>
+                  <span class="text-xs font-semibold text-slate-300">Cash on Delivery</span>
                 </label>
               </div>
             </div>
@@ -122,12 +113,13 @@ import { CreateOrderRequest, Order } from '../../models/order.model';
             <!-- Summary Column -->
             <div class="lg:col-span-1 space-y-4">
               <div class="glass-card rounded-2xl p-5 border border-slate-800 space-y-4">
-                <h4 class="text-sm font-bold text-white">Order Review</h4>
+                <h4 class="text-sm font-bold text-white">Cart Summary</h4>
                 <div class="divide-y divide-slate-800/60 max-h-48 overflow-y-auto pr-1">
                   @for (item of cartService.items(); track item.product.id) {
                     <div class="py-2 flex justify-between text-xs">
                       <div>
                         <p class="font-medium text-slate-200">{{ item.product.name }}</p>
+                        <p class="text-[10px] text-emerald-400 font-medium">{{ item.product.sellerStoreName || 'Apex Electronics Store' }}</p>
                         <p class="text-[10px] text-slate-400">Qty: {{ item.quantity }} × \${{ item.product.price.toFixed(2) }}</p>
                       </div>
                       <span class="font-semibold text-white font-['Outfit']">\${{ (item.product.price * item.quantity).toFixed(2) }}</span>
@@ -141,12 +133,12 @@ import { CreateOrderRequest, Order } from '../../models/order.model';
                     <span class="text-white font-semibold">\${{ cartService.subtotal().toFixed(2) }}</span>
                   </div>
                   <div class="flex justify-between text-slate-400">
-                    <span>Tax (8%)</span>
-                    <span class="text-white font-semibold">\${{ (cartService.subtotal() * 0.08).toFixed(2) }}</span>
+                    <span>Shipping (Split)</span>
+                    <span class="text-white font-semibold">\$5.00</span>
                   </div>
                   <div class="flex justify-between text-sm font-bold text-white pt-2 border-t border-slate-800">
                     <span>Total</span>
-                    <span class="text-emerald-400 font-['Outfit']">\${{ (cartService.subtotal() * 1.08).toFixed(2) }}</span>
+                    <span class="text-emerald-400 font-['Outfit']">\${{ (cartService.subtotal() + 5.00).toFixed(2) }}</span>
                   </div>
                 </div>
 
@@ -156,7 +148,7 @@ import { CreateOrderRequest, Order } from '../../models/order.model';
                   class="w-full py-3 rounded-xl bg-emerald-500 hover:bg-emerald-400 disabled:opacity-40 text-slate-950 font-bold text-xs shadow-lg shadow-emerald-500/20 active:scale-[0.99] transition-all duration-200 flex items-center justify-center space-x-2">
                   @if (isSubmitting()) {
                     <div class="w-4 h-4 border-2 border-slate-950 border-t-transparent rounded-full animate-spin"></div>
-                    <span>Processing Order...</span>
+                    <span>Reserving Stock & Placing Order...</span>
                   } @else {
                     <span>Place Order Now</span>
                   }
@@ -180,11 +172,10 @@ export class CheckoutComponent implements OnInit {
   shippingPostalCode = '';
   customerPhone = '';
   paymentMethod = 'CREDIT_CARD';
-  notes = '';
 
   isSubmitting = signal<boolean>(false);
   errorMessage = signal<string | null>(null);
-  confirmedOrder = signal<Order | null>(null);
+  confirmedOrder = signal<ParentOrder | null>(null);
 
   ngOnInit(): void {
     const user = this.authService.currentUser();
@@ -220,11 +211,10 @@ export class CheckoutComponent implements OnInit {
       shippingCity: this.shippingCity,
       shippingPostalCode: this.shippingPostalCode,
       customerPhone: this.customerPhone,
-      paymentMethod: this.paymentMethod,
-      notes: this.notes
+      paymentMethod: this.paymentMethod
     };
 
-    this.orderService.createOrder(orderRequest).subscribe({
+    this.orderService.checkout(orderRequest).subscribe({
       next: (res) => {
         if (res.success && res.data) {
           this.confirmedOrder.set(res.data);
@@ -233,7 +223,7 @@ export class CheckoutComponent implements OnInit {
         this.isSubmitting.set(false);
       },
       error: (err) => {
-        this.errorMessage.set(err.error?.message || 'Failed to place order. Resilience4j fallback may have triggered if downstream services are busy.');
+        this.errorMessage.set(err.error?.message || 'Failed to place order. Inter-service stock reservation may have encountered an issue.');
         this.isSubmitting.set(false);
       }
     });

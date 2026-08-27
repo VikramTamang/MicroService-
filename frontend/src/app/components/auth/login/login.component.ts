@@ -72,10 +72,16 @@ import { AuthService } from '../../../services/auth.service';
         <div class="pt-4 border-t border-slate-800/80 space-y-2">
           <p class="text-[10px] text-slate-500 uppercase tracking-wider text-center">Quick Demo Credentials</p>
           <div class="grid grid-cols-2 gap-2">
-            <button (click)="fillDemo('admin@example.com', 'Password@123')" class="p-2 rounded-lg bg-slate-900 hover:bg-slate-850 border border-slate-800 text-[11px] text-emerald-400 font-medium transition-colors text-center">
+            <button type="button" (click)="fillDemo('seller1@example.com', 'Password@123')" class="p-2 rounded-lg bg-slate-900 hover:bg-slate-850 border border-slate-800 text-[11px] text-amber-400 font-medium transition-colors text-center">
+              🏪 Seller 1 (Apex)
+            </button>
+            <button type="button" (click)="fillDemo('seller2@example.com', 'Password@123')" class="p-2 rounded-lg bg-slate-900 hover:bg-slate-850 border border-slate-800 text-[11px] text-amber-400 font-medium transition-colors text-center">
+              🏪 Seller 2 (Nordic)
+            </button>
+            <button type="button" (click)="fillDemo('admin@example.com', 'Password@123')" class="p-2 rounded-lg bg-slate-900 hover:bg-slate-850 border border-slate-800 text-[11px] text-purple-400 font-medium transition-colors text-center">
               🔑 Admin Demo
             </button>
-            <button (click)="fillDemo('customer@example.com', 'Password@123')" class="p-2 rounded-lg bg-slate-900 hover:bg-slate-850 border border-slate-800 text-[11px] text-teal-400 font-medium transition-colors text-center">
+            <button type="button" (click)="fillDemo('customer@example.com', 'Password@123')" class="p-2 rounded-lg bg-slate-900 hover:bg-slate-850 border border-slate-800 text-[11px] text-emerald-400 font-medium transition-colors text-center">
               👤 Customer Demo
             </button>
           </div>
@@ -116,6 +122,8 @@ export class LoginComponent {
             this.router.navigateByUrl(returnUrl);
           } else if (this.authService.isAdmin()) {
             this.router.navigate(['/admin']);
+          } else if (this.authService.isSeller()) {
+            this.router.navigate(['/seller']);
           } else {
             this.router.navigate(['/']);
           }

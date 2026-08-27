@@ -13,7 +13,8 @@ import com.project.order.exception.ServiceUnavailableException;
 import com.project.order.repository.OrderRepository;
 import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -28,13 +29,23 @@ import java.util.List;
 import java.util.UUID;
 
 @Service
-@RequiredArgsConstructor
-@Slf4j
 public class OrderService {
+
+    private static final Logger log = LoggerFactory.getLogger(OrderService.class);
 
     private final OrderRepository orderRepository;
     private final ProductServiceClient productServiceClient;
     private final UserServiceClient userServiceClient;
+
+    public OrderService(
+            OrderRepository orderRepository,
+            ProductServiceClient productServiceClient,
+            UserServiceClient userServiceClient
+    ) {
+        this.orderRepository = orderRepository;
+        this.productServiceClient = productServiceClient;
+        this.userServiceClient = userServiceClient;
+    }
 
     @Transactional
     public OrderDto createOrder(CreateOrderRequest request, Long authUserId, String authUserEmail) {

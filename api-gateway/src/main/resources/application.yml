@@ -31,27 +31,51 @@ spring:
         - id: user-service-auth
           uri: lb://user-service
           predicates:
-            - Path=/api/v1/auth/**
+            - Path=/api/v1/auth, /api/v1/auth/**
         - id: user-service-users
           uri: lb://user-service
           predicates:
-            - Path=/api/v1/users/**
+            - Path=/api/v1/users, /api/v1/users/**
+        - id: user-service-sellers
+          uri: lb://user-service
+          predicates:
+            - Path=/api/v1/sellers, /api/v1/sellers/**
+        - id: user-service-admin
+          uri: lb://user-service
+          predicates:
+            - Path=/api/v1/admin/sellers, /api/v1/admin/sellers/**, /api/v1/admin/users, /api/v1/admin/users/**
 
         # Product and Catalog Service Routes
+        - id: product-service-seller
+          uri: lb://product-service
+          predicates:
+            - Path=/api/v1/seller/products, /api/v1/seller/products/**
+        - id: product-service-admin
+          uri: lb://product-service
+          predicates:
+            - Path=/api/v1/admin/products, /api/v1/admin/products/**
         - id: product-service-products
           uri: lb://product-service
           predicates:
-            - Path=/api/v1/products/**
+            - Path=/api/v1/products, /api/v1/products/**
         - id: product-service-categories
           uri: lb://product-service
           predicates:
-            - Path=/api/v1/categories/**
+            - Path=/api/v1/categories, /api/v1/categories/**
 
         # Order Service Routes
+        - id: order-service-seller
+          uri: lb://order-service
+          predicates:
+            - Path=/api/v1/seller/sub-orders, /api/v1/seller/sub-orders/**
+        - id: order-service-admin
+          uri: lb://order-service
+          predicates:
+            - Path=/api/v1/admin/orders, /api/v1/admin/orders/**
         - id: order-service-orders
           uri: lb://order-service
           predicates:
-            - Path=/api/v1/orders/**
+            - Path=/api/v1/orders, /api/v1/orders/**
 
 eureka:
   client:

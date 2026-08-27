@@ -22,7 +22,7 @@ import { CartService } from '../../services/cart.service';
               </div>
               <div class="flex flex-col">
                 <span class="text-xl font-bold tracking-tight font-['Outfit'] bg-gradient-to-r from-white via-slate-100 to-emerald-400 bg-clip-text text-transparent">ApexStore</span>
-                <span class="text-[10px] text-emerald-400 font-semibold tracking-widest -mt-1 uppercase">Microservices</span>
+                <span class="text-[10px] text-emerald-400 font-semibold tracking-widest -mt-1 uppercase">Marketplace</span>
               </div>
             </a>
           </div>
@@ -30,19 +30,23 @@ import { CartService } from '../../services/cart.service';
           <!-- Navigation Links -->
           <nav class="hidden md:flex items-center space-x-1 text-sm font-medium">
             <a routerLink="/" routerLinkActive="text-emerald-400 bg-emerald-500/10" [routerLinkActiveOptions]="{exact: true}" class="px-3.5 py-2 rounded-lg text-slate-300 hover:text-white hover:bg-slate-800/60 transition-all duration-200">
-              Catalog
+              Marketplace
             </a>
             @if (authService.isAuthenticated()) {
               <a routerLink="/my-orders" routerLinkActive="text-emerald-400 bg-emerald-500/10" class="px-3.5 py-2 rounded-lg text-slate-300 hover:text-white hover:bg-slate-800/60 transition-all duration-200">
                 My Orders
               </a>
             }
+            @if (authService.isSeller() || authService.isAdmin()) {
+              <a routerLink="/seller" routerLinkActive="text-cyan-400 bg-cyan-500/10" class="px-3.5 py-2 rounded-lg text-cyan-300 hover:text-cyan-200 hover:bg-cyan-500/20 transition-all duration-200 flex items-center space-x-1.5 border border-cyan-500/30">
+                <span>🏪</span>
+                <span>Seller Hub</span>
+              </a>
+            }
             @if (authService.isAdmin()) {
-              <a routerLink="/admin" routerLinkActive="text-emerald-400 bg-emerald-500/10" class="px-3.5 py-2 rounded-lg text-emerald-300 hover:text-emerald-200 hover:bg-emerald-500/20 transition-all duration-200 flex items-center space-x-1.5 border border-emerald-500/30">
-                <svg class="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-                </svg>
-                <span>Admin Console</span>
+              <a routerLink="/admin" routerLinkActive="text-purple-400 bg-purple-500/10" class="px-3.5 py-2 rounded-lg text-purple-300 hover:text-purple-200 hover:bg-purple-500/20 transition-all duration-200 flex items-center space-x-1.5 border border-purple-500/30">
+                <span>🛡️</span>
+                <span>Moderation</span>
               </a>
             }
           </nav>
@@ -66,7 +70,15 @@ import { CartService } from '../../services/cart.service';
               <div class="flex items-center space-x-3 pl-2 border-l border-slate-800">
                 <div class="text-right hidden sm:block">
                   <p class="text-xs font-semibold text-slate-200">{{ authService.userFullName() }}</p>
-                  <p class="text-[10px] text-emerald-400 font-medium">{{ authService.currentUser()?.role === 'ROLE_ADMIN' ? 'Administrator' : 'Customer' }}</p>
+                  <p class="text-[10px] text-emerald-400 font-medium">
+                    @if (authService.currentUser()?.role === 'ROLE_ADMIN') {
+                      Admin
+                    } @else if (authService.currentUser()?.role === 'ROLE_SELLER') {
+                      Seller ({{ authService.sellerProfile()?.storeName || 'Merchant' }})
+                    } @else {
+                      Customer
+                    }
+                  </p>
                 </div>
                 <button (click)="authService.logout()" title="Logout" class="p-2 rounded-xl bg-slate-900 border border-slate-800 text-slate-400 hover:text-rose-400 hover:border-rose-500/30 transition-all duration-200">
                   <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">

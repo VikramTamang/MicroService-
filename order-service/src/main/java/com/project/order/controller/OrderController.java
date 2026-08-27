@@ -1,9 +1,7 @@
 package com.project.order.controller;
 
-import com.project.order.dto.ApiResponse;
-import com.project.order.dto.CreateOrderRequest;
-import com.project.order.dto.OrderDto;
-import com.project.order.dto.OrderStatusUpdateRequest;
+import com.project.order.dto.*;
+import com.project.order.service.MultiSellerOrderService;
 import com.project.order.service.OrderService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -14,69 +12,65 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
-
 @RestController
 @RequestMapping("/api/v1/orders")
-@RequiredArgsConstructor
-@Tag(name = "Orders", description = "Endpoints for order creation, tracking, and management")
+@Tag(name = "Orders", description = "Endpoints for customer order checkout and multi-seller sub-order tracking")
 public class OrderController {
 
+    private final MultiSellerOrderService multiSellerOrderService;
     private final OrderService orderService;
 
+    public OrderController(MultiSellerOrderService multiSellerOrderService, OrderService orderService) {
+        this.multiSellerOrderService = multiSellerOrderService;
+        this.orderService = orderService;
+    }
+
     @PostMapping
-    @Operation(summary = "Place a new order")
-    public ResponseEntity<ApiResponse<OrderDto>> createOrder(
+    @Operation(summary = "Place a new multi-seller marketplace order")
+    public ResponseEntity<ApiResponse<ParentOrderDto>> createOrder(
             @RequestHeader(value = "X-User-Id", required = false) Long authUserId,
             @RequestHeader(value = "X-User-Email", required = false) String authUserEmail,
             @Valid @RequestBody CreateOrderRequest request
     ) {
-        OrderDto orderDto = orderService.createOrder(request, authUserId, authUserEmail);
+        Long customerId = authUserId != null ? authUserId : 2L;
+        String email = authUserEmail != null ? authUserEmail : "customer@example.com";
+        ParentOrderDto parentOrder = multiSellerOrderService.checkout(customerId, email, request);
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(ApiResponse.success(orderDto, "Order created successfully"));
+                .body(ApiResponse.success(parentOrder, "Marketplace order placed successfully"));
     }
 
     @GetMapping("/my-orders")
-    @Operation(summary = "Get order history for authenticated user")
-    public ResponseEntity<ApiResponse<List<OrderDto>>> getMyOrders(
+    @Operation(summary = "Get order history for authenticated customer (with sub-order tracking)")
+    public ResponseEntity<ApiResponse<Page<ParentOrderDto>>> getMyOrders(
             @RequestHeader(value = "X-User-Id", required = false) Long authUserId,
-            @RequestHeader(value = "X-User-Email", required = false) String authUserEmail
+            @RequestParam(name = "page", defaultValue = "0") int page,
+            @RequestParam(name = "size", defaultValue = "20") int size
     ) {
-        List<OrderDto> orders = orderService.getOrdersForUser(authUserId, authUserEmail);
-        return ResponseEntity.ok(ApiResponse.success(orders, "User orders retrieved successfully"));
+        Long customerId = authUserId != null ? authUserId : 2L;
+        Page<ParentOrderDto> orders = multiSellerOrderService.getCustomerOrders(customerId, page, size);
+        return ResponseEntity.ok(ApiResponse.success(orders, "Customer orders retrieved successfully"));
     }
 
-    @GetMapping("/{id}")
-    @Operation(summary = "Get order details by order ID")
-    public ResponseEntity<ApiResponse<OrderDto>> getOrderById(@PathVariable Long id) {
-        OrderDto order = orderService.getOrderById(id);
+    @GetMapping("/{orderNumber}")
+    @Operation(summary = "Get parent order details and split sub-orders by order number")
+    public ResponseEntity<ApiResponse<ParentOrderDto>> getOrderByNumber(
+            @RequestHeader(value = "X-User-Id", required = false) Long authUserId,
+            @PathVariable("orderNumber") String orderNumber
+    ) {
+        Long customerId = authUserId != null ? authUserId : 2L;
+        ParentOrderDto order = multiSellerOrderService.getCustomerOrder(orderNumber, customerId);
         return ResponseEntity.ok(ApiResponse.success(order, "Order details retrieved successfully"));
     }
 
-    @GetMapping("/tracking/{trackingNumber}")
-    @Operation(summary = "Get order details by tracking number")
-    public ResponseEntity<ApiResponse<OrderDto>> getOrderByTrackingNumber(@PathVariable String trackingNumber) {
-        OrderDto order = orderService.getOrderByTrackingNumber(trackingNumber);
-        return ResponseEntity.ok(ApiResponse.success(order, "Order details retrieved successfully"));
-    }
-
-    @GetMapping
-    @Operation(summary = "Get all orders across system (Admin only)")
-    public ResponseEntity<ApiResponse<Page<OrderDto>>> getAllOrders(
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "20") int size
+    @PostMapping("/sub-orders/{subOrderNumber}/cancel")
+    @Operation(summary = "Cancel a specific sub-order as customer (only before confirmed by seller)")
+    public ResponseEntity<ApiResponse<SubOrderDto>> cancelSubOrder(
+            @RequestHeader(value = "X-User-Id", required = false) Long authUserId,
+            @PathVariable("subOrderNumber") String subOrderNumber,
+            @RequestBody(required = false) CancelSubOrderRequest request
     ) {
-        Page<OrderDto> orders = orderService.getAllOrders(page, size);
-        return ResponseEntity.ok(ApiResponse.success(orders, "All orders retrieved successfully"));
-    }
-
-    @PatchMapping("/{id}/status")
-    @Operation(summary = "Update status of an existing order (Admin)")
-    public ResponseEntity<ApiResponse<OrderDto>> updateOrderStatus(
-            @PathVariable Long id,
-            @Valid @RequestBody OrderStatusUpdateRequest request
-    ) {
-        OrderDto updated = orderService.updateOrderStatus(id, request.getStatus());
-        return ResponseEntity.ok(ApiResponse.success(updated, "Order status updated successfully"));
+        Long customerId = authUserId != null ? authUserId : 2L;
+        SubOrderDto cancelled = multiSellerOrderService.cancelSubOrderAsCustomer(subOrderNumber, customerId, request);
+        return ResponseEntity.ok(ApiResponse.success(cancelled, "Sub-order cancelled"));
     }
 }

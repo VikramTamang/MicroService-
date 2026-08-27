@@ -39,6 +39,8 @@ export class CartService {
         return [...current, {
           product: {
             id: product.id,
+            sellerId: product.sellerId || 1,
+            sellerStoreName: (product.sellerId === 2) ? 'Nordic Home & Living' : 'Apex Electronics Store',
             name: product.name,
             price: product.price,
             imageUrl: product.imageUrl,

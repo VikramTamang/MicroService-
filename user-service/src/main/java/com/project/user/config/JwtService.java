@@ -34,6 +34,11 @@ public class JwtService {
         extraClaims.put("email", user.getEmail());
         extraClaims.put("role", user.getRole().name());
         extraClaims.put("fullName", user.getFirstName() + " " + user.getLastName());
+        
+        if (user.getSellerProfile() != null) {
+            extraClaims.put("sellerId", user.getSellerProfile().getId());
+            extraClaims.put("storeName", user.getSellerProfile().getStoreName());
+        }
 
         return Jwts.builder()
                 .claims(extraClaims)

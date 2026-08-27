@@ -33,6 +33,11 @@ public class AuthService {
             throw new BadRequestException("Email already registered: " + request.getEmail());
         }
 
+        Role assignedRole = Role.ROLE_CUSTOMER;
+        if (request.getRole() != null && (request.getRole().equalsIgnoreCase("ROLE_SELLER") || request.getRole().equalsIgnoreCase("SELLER"))) {
+            assignedRole = Role.ROLE_SELLER;
+        }
+
         User user = User.builder()
                 .firstName(request.getFirstName().trim())
                 .lastName(request.getLastName().trim())
@@ -42,12 +47,27 @@ public class AuthService {
                 .address(request.getAddress())
                 .city(request.getCity())
                 .postalCode(request.getPostalCode())
-                .role(Role.ROLE_CUSTOMER)
+                .role(assignedRole)
                 .enabled(true)
                 .build();
 
+        if (assignedRole == Role.ROLE_SELLER) {
+            String storeName = (request.getStoreName() != null && !request.getStoreName().isBlank())
+                    ? request.getStoreName().trim()
+                    : request.getFirstName().trim() + "'s Store";
+            String slug = SellerProfileService.generateSlug(storeName) + "-" + System.currentTimeMillis();
+
+            com.project.user.entity.SellerProfile profile = com.project.user.entity.SellerProfile.builder()
+                    .user(user)
+                    .storeName(storeName)
+                    .storeSlug(slug)
+                    .verificationStatus(com.project.user.entity.SellerVerificationStatus.PENDING)
+                    .build();
+            user.setSellerProfile(profile);
+        }
+
         User savedUser = userRepository.save(user);
-        log.info("User registered successfully with id: {}", savedUser.getId());
+        log.info("User registered successfully with id: {}, role: {}", savedUser.getId(), savedUser.getRole());
 
         String token = jwtService.generateToken(savedUser);
         return AuthResponse.builder()

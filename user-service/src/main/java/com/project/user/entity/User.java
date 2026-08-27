@@ -40,12 +40,25 @@ public class User {
     @Builder.Default
     private Role role = Role.ROLE_CUSTOMER;
 
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 50)
+    @Builder.Default
+    private UserStatus status = UserStatus.ACTIVE;
+
     private String address;
     private String city;
     private String postalCode;
 
     @Builder.Default
     private boolean enabled = true;
+
+    @OneToOne(mappedBy = "user", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    private SellerProfile sellerProfile;
+
+    @Builder.Default
+    private Integer failedLoginAttempts = 0;
+
+    private LocalDateTime lockoutUntil;
 
     @CreationTimestamp
     @Column(updatable = false)
