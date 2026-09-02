@@ -22,6 +22,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 @Service
@@ -349,6 +350,8 @@ public class ProductService {
 
             confirmedItems.add(StockReservationItem.builder()
                     .productId(product.getId())
+                    .sellerId(product.getSellerId())
+                    .sku(product.getSku())
                     .productName(product.getName())
                     .quantity(item.getQuantity())
                     .unitPrice(product.getPrice())
@@ -362,6 +365,35 @@ public class ProductService {
                 .totalAmount(totalAmount)
                 .confirmedItems(confirmedItems)
                 .build();
+    }
+
+    @Transactional
+    public void releaseStock(StockReleaseRequest request) {
+        log.info("Compensating stock rollback for tracking: {} with {} items",
+                request.getOrderTrackingNumber(), request.getItems() != null ? request.getItems().size() : 0);
+        if (request.getItems() == null || request.getItems().isEmpty()) {
+            return;
+        }
+        for (StockReservationItem item : request.getItems()) {
+            if (item.getProductId() != null && item.getQuantity() != null && item.getQuantity() > 0) {
+                productRepository.findById(item.getProductId()).ifPresent(product -> {
+                    product.setStockQuantity(product.getStockQuantity() + item.getQuantity());
+                    productRepository.save(product);
+                    log.info("Restored stock for product id={} name='{}', incremented by {}, new stock={}",
+                            product.getId(), product.getName(), item.getQuantity(), product.getStockQuantity());
+                });
+            }
+        }
+    }
+
+    @Transactional(readOnly = true)
+    public List<ProductDto> getProductsByIds(List<Long> productIds) {
+        if (productIds == null || productIds.isEmpty()) {
+            return Collections.emptyList();
+        }
+        return productRepository.findAllById(productIds).stream()
+                .map(this::mapToDto)
+                .toList();
     }
 
     public ProductDto mapToDto(Product product) {

@@ -31,8 +31,11 @@ public class SellerSubOrderController {
             @RequestParam(defaultValue = "0", name = "page") int page,
             @RequestParam(defaultValue = "20", name = "size") int size
     ) {
-        Long effectiveSellerId = sellerId != null ? sellerId : 1L;
-        Page<SubOrderDto> subOrders = multiSellerOrderService.getSellerSubOrders(effectiveSellerId, page, size);
+        if (sellerId == null) {
+            return ResponseEntity.status(org.springframework.http.HttpStatus.FORBIDDEN)
+                    .body(ApiResponse.failure("Access denied: Seller store identification required"));
+        }
+        Page<SubOrderDto> subOrders = multiSellerOrderService.getSellerSubOrders(sellerId, page, size);
         return ResponseEntity.ok(ApiResponse.success(subOrders, "Seller sub-orders retrieved"));
     }
 
@@ -42,8 +45,11 @@ public class SellerSubOrderController {
             @RequestHeader(value = "X-Seller-Id", required = false) Long sellerId,
             @PathVariable("subOrderNumber") String subOrderNumber
     ) {
-        Long effectiveSellerId = sellerId != null ? sellerId : 1L;
-        SubOrderDto subOrder = multiSellerOrderService.getSubOrderForSeller(subOrderNumber, effectiveSellerId);
+        if (sellerId == null) {
+            return ResponseEntity.status(org.springframework.http.HttpStatus.FORBIDDEN)
+                    .body(ApiResponse.failure("Access denied: Seller store identification required"));
+        }
+        SubOrderDto subOrder = multiSellerOrderService.getSubOrderForSeller(subOrderNumber, sellerId);
         return ResponseEntity.ok(ApiResponse.success(subOrder, "Sub-order details retrieved"));
     }
 
@@ -53,8 +59,11 @@ public class SellerSubOrderController {
             @RequestHeader(value = "X-Seller-Id", required = false) Long sellerId,
             @PathVariable("subOrderNumber") String subOrderNumber
     ) {
-        Long effectiveSellerId = sellerId != null ? sellerId : 1L;
-        SubOrderDto confirmed = multiSellerOrderService.confirmSubOrder(subOrderNumber, effectiveSellerId);
+        if (sellerId == null) {
+            return ResponseEntity.status(org.springframework.http.HttpStatus.FORBIDDEN)
+                    .body(ApiResponse.failure("Access denied: Seller store identification required"));
+        }
+        SubOrderDto confirmed = multiSellerOrderService.confirmSubOrder(subOrderNumber, sellerId);
         return ResponseEntity.ok(ApiResponse.success(confirmed, "Sub-order confirmed"));
     }
 
@@ -64,8 +73,11 @@ public class SellerSubOrderController {
             @RequestHeader(value = "X-Seller-Id", required = false) Long sellerId,
             @PathVariable("subOrderNumber") String subOrderNumber
     ) {
-        Long effectiveSellerId = sellerId != null ? sellerId : 1L;
-        SubOrderDto packed = multiSellerOrderService.packSubOrder(subOrderNumber, effectiveSellerId);
+        if (sellerId == null) {
+            return ResponseEntity.status(org.springframework.http.HttpStatus.FORBIDDEN)
+                    .body(ApiResponse.failure("Access denied: Seller store identification required"));
+        }
+        SubOrderDto packed = multiSellerOrderService.packSubOrder(subOrderNumber, sellerId);
         return ResponseEntity.ok(ApiResponse.success(packed, "Sub-order marked as packed"));
     }
 
@@ -76,8 +88,11 @@ public class SellerSubOrderController {
             @PathVariable("subOrderNumber") String subOrderNumber,
             @Valid @RequestBody FulfillSubOrderRequest request
     ) {
-        Long effectiveSellerId = sellerId != null ? sellerId : 1L;
-        SubOrderDto shipped = multiSellerOrderService.shipSubOrder(subOrderNumber, effectiveSellerId, request);
+        if (sellerId == null) {
+            return ResponseEntity.status(org.springframework.http.HttpStatus.FORBIDDEN)
+                    .body(ApiResponse.failure("Access denied: Seller store identification required"));
+        }
+        SubOrderDto shipped = multiSellerOrderService.shipSubOrder(subOrderNumber, sellerId, request);
         return ResponseEntity.ok(ApiResponse.success(shipped, "Sub-order marked as shipped"));
     }
 
@@ -88,8 +103,11 @@ public class SellerSubOrderController {
             @PathVariable("subOrderNumber") String subOrderNumber,
             @RequestBody(required = false) CancelSubOrderRequest request
     ) {
-        Long effectiveSellerId = sellerId != null ? sellerId : 1L;
-        SubOrderDto cancelled = multiSellerOrderService.cancelSubOrderAsSeller(subOrderNumber, effectiveSellerId, request);
+        if (sellerId == null) {
+            return ResponseEntity.status(org.springframework.http.HttpStatus.FORBIDDEN)
+                    .body(ApiResponse.failure("Access denied: Seller store identification required"));
+        }
+        SubOrderDto cancelled = multiSellerOrderService.cancelSubOrderAsSeller(subOrderNumber, sellerId, request);
         return ResponseEntity.ok(ApiResponse.success(cancelled, "Sub-order cancelled"));
     }
 }

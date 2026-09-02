@@ -1,9 +1,7 @@
 package com.project.user.exception;
 
-import lombok.Getter;
 import org.springframework.http.HttpStatus;
 
-@Getter
 public class AppException extends RuntimeException {
 
     private final HttpStatus status;
@@ -22,4 +20,7 @@ public class AppException extends RuntimeException {
     public AppException(String message) {
         this(message, HttpStatus.BAD_REQUEST, "BAD_REQUEST");
     }
+
+    public HttpStatus getStatus() { return status; }
+    public String getErrorCode() { return errorCode; }
 }

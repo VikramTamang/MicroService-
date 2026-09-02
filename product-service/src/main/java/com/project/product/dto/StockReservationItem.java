@@ -8,6 +8,8 @@ public class StockReservationItem {
     @NotNull(message = "Product ID is required")
     private Long productId;
 
+    private Long sellerId;
+    private String sku;
     private String productName;
 
     @NotNull(message = "Quantity is required")
@@ -21,6 +23,12 @@ public class StockReservationItem {
 
     public Long getProductId() { return productId; }
     public void setProductId(Long productId) { this.productId = productId; }
+
+    public Long getSellerId() { return sellerId; }
+    public void setSellerId(Long sellerId) { this.sellerId = sellerId; }
+
+    public String getSku() { return sku; }
+    public void setSku(String sku) { this.sku = sku; }
 
     public String getProductName() { return productName; }
     public void setProductName(String productName) { this.productName = productName; }
@@ -39,6 +47,8 @@ public class StockReservationItem {
     public static class Builder {
         private final StockReservationItem item = new StockReservationItem();
         public Builder productId(Long productId) { item.setProductId(productId); return this; }
+        public Builder sellerId(Long sellerId) { item.setSellerId(sellerId); return this; }
+        public Builder sku(String sku) { item.setSku(sku); return this; }
         public Builder productName(String productName) { item.setProductName(productName); return this; }
         public Builder quantity(Integer quantity) { item.setQuantity(quantity); return this; }
         public Builder unitPrice(BigDecimal unitPrice) { item.setUnitPrice(unitPrice); return this; }

@@ -11,20 +11,25 @@ import com.project.user.exception.BadRequestException;
 import com.project.user.exception.ResourceNotFoundException;
 import com.project.user.repository.SellerProfileRepository;
 import com.project.user.repository.UserRepository;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
 @Service
-@RequiredArgsConstructor
-@Slf4j
 public class SellerProfileService {
+
+    private static final Logger log = LoggerFactory.getLogger(SellerProfileService.class);
 
     private final SellerProfileRepository sellerProfileRepository;
     private final UserRepository userRepository;
+
+    public SellerProfileService(SellerProfileRepository sellerProfileRepository, UserRepository userRepository) {
+        this.sellerProfileRepository = sellerProfileRepository;
+        this.userRepository = userRepository;
+    }
 
     @Transactional
     public SellerProfileDto submitOnboarding(Long userId, SellerOnboardingRequest request) {

@@ -1,6 +1,6 @@
 # ApexStore - Enterprise Microservices E-Commerce Platform
 
-A production-style distributed microservices platform built with Spring Boot 3.3.x, Spring Cloud (Netflix Eureka, Spring Cloud Gateway, OpenFeign, Resilience4j), Spring Data JPA, Flyway, and an Angular 18+ standalone frontend.
+A production-style distributed microservices platform built with Spring Boot 3.3.x, Spring Cloud (Netflix Eureka, Spring Cloud Gateway, OpenFeign, Resilience4j), Spring Data JPA, Flyway SQL Migrations, and an Angular 18+ standalone frontend.
 
 ---
 
@@ -26,10 +26,10 @@ graph TD
     OrderService -.->|Feign Client + CircuitBreaker| ProductService
     OrderService -.->|Feign Client + CircuitBreaker| UserService
     
-    subgraph Databases
-        UserDB[(user_db / Flyway)]
-        ProductDB[(product_db / Flyway)]
-        OrderDB[(order_db / Flyway)]
+    subgraph Relational SQL Databases
+        UserDB[(user_db / Flyway SQL)]
+        ProductDB[(product_db / Flyway SQL)]
+        OrderDB[(order_db / Flyway SQL)]
     end
     
     UserService --> UserDB
@@ -45,35 +45,32 @@ graph TD
 |---------|------|----------|------------------------|
 | **Eureka Server** | `8761` | None | Dynamic service registration, heartbeat, and discovery registry |
 | **API Gateway** | `8080` | None | Single entry point, JWT validation, claims propagation, CORS |
-| **User Service** | `8081` | `user_db` | User registration, login, BCrypt hashing, JWT issuance, profile management |
-| **Product Service** | `8082` | `product_db` | Category and product catalog, stock inventory, stock reservation API |
-| **Order Service** | `8083` | `order_db` | Order lifecycle, OpenFeign RPC, Resilience4j circuit breakers & fallbacks |
-| **Frontend** | `4200` | LocalStorage | Angular 18+ Signals, Tailwind CSS, Cart, Checkout, Admin Console |
+| **User Service** | `8081` | `user_db` (SQL) | User registration, login, BCrypt hashing, JWT issuance, seller onboarding |
+| **Product Service** | `8082` | `product_db` (SQL) | Category & product catalog, multi-seller inventory, stock reservation API |
+| **Order Service** | `8083` | `order_db` (SQL) | Multi-seller sub-order decomposition, Saga compensation, CircuitBreakers |
+| **Frontend** | `4200` | LocalStorage | Angular 18+ Signals, Cart, Multi-Seller Checkout, Seller & Admin Dashboards |
 
 ---
 
-## Key Enterprise Architectural Patterns
+## Relational SQL Database Architecture
 
-1. **Service Discovery & Client-Side Load Balancing**:
-   - Eureka server maintains active health registry.
-   - Gateway and Feign use `lb://<service-name>` for declarative load balancing.
+All services strictly follow the **Database-per-Service** pattern using SQL schemas and Flyway migrations:
 
-2. **API Gateway & Edge Security**:
-   - JWT tokens validated at the edge.
-   - Downstream services receive authenticated identity headers: `X-User-Id`, `X-User-Email`, `X-User-Roles`.
+1. **User Database (`user_db`)**:
+   - `users`: User profiles, roles, authentication credentials
+   - `seller_profiles`: Multi-seller business details, verification status, store metadata
+2. **Product Database (`product_db`)**:
+   - `categories`: Hierarchy, category slugs, descriptions
+   - `products`: Multi-seller catalog, SKU tracking, pricing, inventory stock
+3. **Order Database (`order_db`)**:
+   - `parent_orders`: Customer unified checkout records, aggregated totals
+   - `sub_orders`: Seller-specific decomposed order fulfillments
+   - `sub_order_items`: Line items mapped to each store
 
-3. **Resilience4j Circuit Breaker & Graceful Degradation**:
-   - Order placement RPC calls to `product-service` and `user-service` are wrapped with `@CircuitBreaker`.
-   - In case of network partition or service downtime, graceful degradation handles failures cleanly without crashing caller threads.
-
-4. **Database-per-Service Pattern**:
-   - Strict database isolation across services (`user_db`, `product_db`, `order_db`).
-   - Flyway automated migrations (`V1__init_*.sql`).
-   - Dual-profile support: Zero-config in-memory/file H2 for rapid local development, and MySQL 8.0 for production/Docker.
-
-5. **Uniform REST API Envelope**:
-   - Standardized `ApiResponse<T>` envelope containing `success`, `message`, `data`, `timestamp`.
-   - Global exception handling with `AppException` hierarchy.
+### SQL Migration Files:
+- [`user-service/src/main/resources/db/migration/`](file:///d:/MicroService/user-service/src/main/resources/db/migration)
+- [`product-service/src/main/resources/db/migration/`](file:///d:/MicroService/product-service/src/main/resources/db/migration)
+- [`order-service/src/main/resources/db/migration/`](file:///d:/MicroService/order-service/src/main/resources/db/migration)
 
 ---
 
@@ -82,63 +79,37 @@ graph TD
 ### Prerequisites
 - Java 17 or 21 (LTS)
 - Node.js 18+ and npm 10+
-- Docker and Docker Compose (optional, for containerized deployment)
+- Optional: Local MySQL Server (port 3306) or use the zero-configuration embedded SQL mode.
 
 ---
 
-### Option 1: Local Development
+### One-Click Startup (Recommended)
 
-#### 1. Compile All Backend Services
-```powershell
-.\mvnw.cmd clean package -DskipTests
-```
-
-#### 2. Start Services in Recommended Sequence
-Open separate terminal windows and run each service:
+From the project root `d:\MicroService`:
 
 ```powershell
-# 1. Start Eureka Registry (Port 8761)
-cd eureka-server
-..\mvnw.cmd spring-boot:run
-
-# 2. Start User & Auth Service (Port 8081)
-cd user-service
-..\mvnw.cmd spring-boot:run
-
-# 3. Start Product & Catalog Service (Port 8082)
-cd product-service
-..\mvnw.cmd spring-boot:run
-
-# 4. Start Order Service (Port 8083)
-cd order-service
-..\mvnw.cmd spring-boot:run
-
-# 5. Start API Gateway (Port 8080)
-cd api-gateway
-..\mvnw.cmd spring-boot:run
+.\start-all.ps1
 ```
+*(or double-click `start-all.bat`)*
 
-#### 3. Start Angular Frontend (Port 4200)
-```powershell
-cd frontend
-npm start
-```
-Navigate to `http://localhost:4200` in your browser.
+This automatically starts:
+1. Eureka Server (`8761`)
+2. User Service (`8081`)
+3. Product Service (`8082`)
+4. Order Service (`8083`)
+5. API Gateway (`8080`)
+6. Angular Frontend (`4200`)
 
 ---
 
-### Option 2: Docker Compose (Full Stack Orchestration)
+### Management Scripts
 
-To build and run the entire stack with containerized MySQL, Eureka, Gateway, and Services:
-
-```bash
-docker-compose up --build -d
-```
-
-Check running containers:
-```bash
-docker-compose ps
-```
+| Command | Action |
+|---------|--------|
+| `.\start-all.ps1` | Launch all microservices and frontend |
+| `.\start-all.ps1 -SkipFrontend` | Launch backend services only |
+| `.\status.ps1` | Inspect live ports and process IDs |
+| `.\stop-all.ps1` | Stop and kill all running services cleanly |
 
 ---
 
@@ -146,15 +117,17 @@ docker-compose ps
 
 | Role | Email | Password | Access Rights |
 |------|-------|----------|---------------|
-| **Administrator** | `admin@example.com` | `Password@123` | Product CRUD, Order Status Management, System Topology |
-| **Customer** | `customer@example.com` | `Password@123` | Catalog Browsing, Cart, Checkout, My Orders History |
+| **Administrator** | `admin@example.com` | `Password@123` | Product moderation, seller approvals, system management |
+| **Seller 1** | `seller1@example.com` | `Password@123` | Apex Electronics store management, product inventory |
+| **Seller 2** | `seller2@example.com` | `Password@123` | Nordic Home store management, sub-order fulfillment |
+| **Customer** | `customer@example.com` | `Password@123` | Multi-seller cart, checkout, order tracking |
 
 ---
 
 ## Swagger / OpenAPI Documentation
 
-Each microservice provides interactive Swagger UI documentation for direct testing:
-- **User Service:** `http://localhost:8081/swagger-ui.html`
-- **Product Service:** `http://localhost:8082/swagger-ui.html`
-- **Order Service:** `http://localhost:8083/swagger-ui.html`
-- **Eureka Dashboard:** `http://localhost:8761`
+- **User Service:** [http://localhost:8081/swagger-ui.html](http://localhost:8081/swagger-ui.html)
+- **Product Service:** [http://localhost:8082/swagger-ui.html](http://localhost:8082/swagger-ui.html)
+- **Order Service:** [http://localhost:8083/swagger-ui.html](http://localhost:8083/swagger-ui.html)
+- **Eureka Dashboard:** [http://localhost:8761](http://localhost:8761)
+- **Frontend App:** [http://localhost:4200](http://localhost:4200)

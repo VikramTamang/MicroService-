@@ -1,16 +1,7 @@
 package com.project.order.dto;
 
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
-
 import java.math.BigDecimal;
 
-@Data
-@Builder
-@NoArgsConstructor
-@AllArgsConstructor
 public class OrderItemDto {
 
     private Long id;
@@ -19,4 +10,37 @@ public class OrderItemDto {
     private BigDecimal unitPrice;
     private Integer quantity;
     private BigDecimal subtotal;
+
+    public OrderItemDto() {}
+
+    public Long getId() { return id; }
+    public void setId(Long id) { this.id = id; }
+
+    public Long getProductId() { return productId; }
+    public void setProductId(Long productId) { this.productId = productId; }
+
+    public String getProductName() { return productName; }
+    public void setProductName(String productName) { this.productName = productName; }
+
+    public BigDecimal getUnitPrice() { return unitPrice; }
+    public void setUnitPrice(BigDecimal unitPrice) { this.unitPrice = unitPrice; }
+
+    public Integer getQuantity() { return quantity; }
+    public void setQuantity(Integer quantity) { this.quantity = quantity; }
+
+    public BigDecimal getSubtotal() { return subtotal; }
+    public void setSubtotal(BigDecimal subtotal) { this.subtotal = subtotal; }
+
+    public static Builder builder() { return new Builder(); }
+
+    public static class Builder {
+        private final OrderItemDto dto = new OrderItemDto();
+        public Builder id(Long id) { dto.setId(id); return this; }
+        public Builder productId(Long productId) { dto.setProductId(productId); return this; }
+        public Builder productName(String productName) { dto.setProductName(productName); return this; }
+        public Builder unitPrice(BigDecimal unitPrice) { dto.setUnitPrice(unitPrice); return this; }
+        public Builder quantity(Integer quantity) { dto.setQuantity(quantity); return this; }
+        public Builder subtotal(BigDecimal subtotal) { dto.setSubtotal(subtotal); return this; }
+        public OrderItemDto build() { return dto; }
+    }
 }

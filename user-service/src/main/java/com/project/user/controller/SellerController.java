@@ -14,11 +14,14 @@ import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/v1/sellers")
-@RequiredArgsConstructor
 @Tag(name = "Seller Profile", description = "Endpoints for seller onboarding and store management")
 public class SellerController {
 
     private final SellerProfileService sellerProfileService;
+
+    public SellerController(SellerProfileService sellerProfileService) {
+        this.sellerProfileService = sellerProfileService;
+    }
 
     @PostMapping("/onboarding")
     @Operation(summary = "Submit onboarding application to become a verified seller")

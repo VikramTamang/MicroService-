@@ -2,13 +2,13 @@ package com.project.order.dto.client;
 
 import java.util.List;
 
-public class StockReservationRequest {
+public class StockReleaseRequest {
     private String orderTrackingNumber;
     private List<StockReservationItem> items;
 
-    public StockReservationRequest() {}
+    public StockReleaseRequest() {}
 
-    public StockReservationRequest(String orderTrackingNumber, List<StockReservationItem> items) {
+    public StockReleaseRequest(String orderTrackingNumber, List<StockReservationItem> items) {
         this.orderTrackingNumber = orderTrackingNumber;
         this.items = items;
     }
@@ -22,9 +22,9 @@ public class StockReservationRequest {
     public static Builder builder() { return new Builder(); }
 
     public static class Builder {
-        private final StockReservationRequest req = new StockReservationRequest();
+        private final StockReleaseRequest req = new StockReleaseRequest();
         public Builder orderTrackingNumber(String orderTrackingNumber) { req.setOrderTrackingNumber(orderTrackingNumber); return this; }
         public Builder items(List<StockReservationItem> items) { req.setItems(items); return this; }
-        public StockReservationRequest build() { return req; }
+        public StockReleaseRequest build() { return req; }
     }
 }

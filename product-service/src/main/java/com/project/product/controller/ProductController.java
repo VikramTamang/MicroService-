@@ -20,12 +20,16 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/api/v1/products")
-@RequiredArgsConstructor
 @Tag(name = "Products", description = "Endpoints for browsing, searching, and managing products")
 public class ProductController {
 
     private final ProductService productService;
     private final FileStorageService fileStorageService;
+
+    public ProductController(ProductService productService, FileStorageService fileStorageService) {
+        this.productService = productService;
+        this.fileStorageService = fileStorageService;
+    }
 
     @GetMapping
     @Operation(summary = "Get paginated products with optional category and search filters")
@@ -97,6 +101,24 @@ public class ProductController {
     ) {
         StockReservationResponse response = productService.verifyAndReserveStock(request);
         return ResponseEntity.ok(ApiResponse.success(response, "Stock reserved successfully"));
+    }
+
+    @PostMapping("/release-stock")
+    @Operation(summary = "Release/restore stock on order placement failure (Compensating transaction)")
+    public ResponseEntity<ApiResponse<Void>> releaseStock(
+            @Valid @RequestBody StockReleaseRequest request
+    ) {
+        productService.releaseStock(request);
+        return ResponseEntity.ok(ApiResponse.success(null, "Stock released successfully"));
+    }
+
+    @PostMapping("/batch")
+    @Operation(summary = "Batch retrieve products by IDs (Inter-service / Internal)")
+    public ResponseEntity<ApiResponse<java.util.List<ProductDto>>> getProductsBatch(
+            @Valid @RequestBody BatchProductRequest request
+    ) {
+        java.util.List<ProductDto> products = productService.getProductsByIds(request.getProductIds());
+        return ResponseEntity.ok(ApiResponse.success(products, "Batch products retrieved successfully"));
     }
 
     @PostMapping(value = "/upload-image", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)

@@ -14,12 +14,16 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/v1/admin")
-@RequiredArgsConstructor
 @Tag(name = "Admin Moderation", description = "Endpoints for moderating users, sellers, and customer accounts")
 public class AdminModerationController {
 
     private final SellerProfileService sellerProfileService;
     private final UserService userService;
+
+    public AdminModerationController(SellerProfileService sellerProfileService, UserService userService) {
+        this.sellerProfileService = sellerProfileService;
+        this.userService = userService;
+    }
 
     @GetMapping("/sellers")
     @Operation(summary = "Get all registered sellers (Admin)")

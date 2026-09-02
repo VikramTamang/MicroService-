@@ -4,6 +4,7 @@ import com.project.product.exception.BadRequestException;
 import com.project.product.exception.ResourceNotFoundException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.UrlResource;
 import org.springframework.stereotype.Service;
@@ -26,6 +27,10 @@ public class FileStorageService {
     private static final Logger log = LoggerFactory.getLogger(FileStorageService.class);
 
     private final Path uploadDir;
+
+    @Value("${app.image-base-url:http://localhost:8080}")
+    private String imageBaseUrl;
+
     private static final Set<String> ALLOWED_EXTENSIONS = Set.of("jpg", "jpeg", "png", "webp", "gif", "svg");
     private static final Set<String> ALLOWED_MIME_TYPES = Set.of(
             "image/jpeg", "image/png", "image/webp", "image/gif", "image/svg+xml"
@@ -72,7 +77,8 @@ public class FileStorageService {
             log.info("Stored product image successfully: {}", uniqueFilename);
 
             // Return URL accessible through API Gateway
-            return "http://localhost:8080/api/v1/products/images/" + uniqueFilename;
+            String base = (imageBaseUrl != null && !imageBaseUrl.isBlank()) ? imageBaseUrl.replaceAll("/+$", "") : "http://localhost:8080";
+            return base + "/api/v1/products/images/" + uniqueFilename;
         } catch (IOException ex) {
             log.error("Failed to store file: {}", uniqueFilename, ex);
             throw new BadRequestException("Could not store image file. Please try again.");
@@ -82,6 +88,10 @@ public class FileStorageService {
     public Resource loadFileAsResource(String filename) {
         try {
             Path filePath = this.uploadDir.resolve(filename).normalize();
+            if (!filePath.startsWith(this.uploadDir)) {
+                log.warn("Path traversal attempt detected with filename: {}", filename);
+                throw new BadRequestException("Invalid file path specified: " + filename);
+            }
             Resource resource = new UrlResource(filePath.toUri());
             if (resource.exists() && resource.isReadable()) {
                 return resource;
@@ -96,6 +106,9 @@ public class FileStorageService {
     public String getContentType(String filename) {
         try {
             Path filePath = this.uploadDir.resolve(filename).normalize();
+            if (!filePath.startsWith(this.uploadDir)) {
+                return "application/octet-stream";
+            }
             String mimeType = Files.probeContentType(filePath);
             return mimeType != null ? mimeType : "application/octet-stream";
         } catch (IOException e) {

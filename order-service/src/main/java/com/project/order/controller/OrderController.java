@@ -32,9 +32,12 @@ public class OrderController {
             @RequestHeader(value = "X-User-Email", required = false) String authUserEmail,
             @Valid @RequestBody CreateOrderRequest request
     ) {
-        Long customerId = authUserId != null ? authUserId : 2L;
-        String email = authUserEmail != null ? authUserEmail : "customer@example.com";
-        ParentOrderDto parentOrder = multiSellerOrderService.checkout(customerId, email, request);
+        if (authUserId == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(ApiResponse.failure("Authentication required: Missing user identification"));
+        }
+        String email = (authUserEmail != null && !authUserEmail.isBlank()) ? authUserEmail : "customer@example.com";
+        ParentOrderDto parentOrder = multiSellerOrderService.checkout(authUserId, email, request);
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.success(parentOrder, "Marketplace order placed successfully"));
     }
@@ -46,8 +49,11 @@ public class OrderController {
             @RequestParam(name = "page", defaultValue = "0") int page,
             @RequestParam(name = "size", defaultValue = "20") int size
     ) {
-        Long customerId = authUserId != null ? authUserId : 2L;
-        Page<ParentOrderDto> orders = multiSellerOrderService.getCustomerOrders(customerId, page, size);
+        if (authUserId == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(ApiResponse.failure("Authentication required: Missing user identification"));
+        }
+        Page<ParentOrderDto> orders = multiSellerOrderService.getCustomerOrders(authUserId, page, size);
         return ResponseEntity.ok(ApiResponse.success(orders, "Customer orders retrieved successfully"));
     }
 
@@ -57,8 +63,11 @@ public class OrderController {
             @RequestHeader(value = "X-User-Id", required = false) Long authUserId,
             @PathVariable("orderNumber") String orderNumber
     ) {
-        Long customerId = authUserId != null ? authUserId : 2L;
-        ParentOrderDto order = multiSellerOrderService.getCustomerOrder(orderNumber, customerId);
+        if (authUserId == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(ApiResponse.failure("Authentication required: Missing user identification"));
+        }
+        ParentOrderDto order = multiSellerOrderService.getCustomerOrder(orderNumber, authUserId);
         return ResponseEntity.ok(ApiResponse.success(order, "Order details retrieved successfully"));
     }
 
@@ -69,8 +78,11 @@ public class OrderController {
             @PathVariable("subOrderNumber") String subOrderNumber,
             @RequestBody(required = false) CancelSubOrderRequest request
     ) {
-        Long customerId = authUserId != null ? authUserId : 2L;
-        SubOrderDto cancelled = multiSellerOrderService.cancelSubOrderAsCustomer(subOrderNumber, customerId, request);
+        if (authUserId == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(ApiResponse.failure("Authentication required: Missing user identification"));
+        }
+        SubOrderDto cancelled = multiSellerOrderService.cancelSubOrderAsCustomer(subOrderNumber, authUserId, request);
         return ResponseEntity.ok(ApiResponse.success(cancelled, "Sub-order cancelled"));
     }
 }

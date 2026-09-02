@@ -3,16 +3,16 @@ package com.project.order.service;
 import com.project.order.client.ProductServiceClient;
 import com.project.order.client.UserServiceClient;
 import com.project.order.dto.*;
-import com.project.order.dto.client.ProductDto;
-import com.project.order.dto.client.StockReservationItem;
-import com.project.order.dto.client.StockReservationRequest;
-import com.project.order.dto.client.StockReservationResponse;
+import com.project.order.dto.client.*;
 import com.project.order.entity.*;
 import com.project.order.exception.BadRequestException;
 import com.project.order.exception.ResourceNotFoundException;
+import com.project.order.exception.ServiceUnavailableException;
+import com.project.order.exception.AccessDeniedException;
 import com.project.order.repository.ParentOrderRepository;
 import com.project.order.repository.SubOrderItemRepository;
 import com.project.order.repository.SubOrderRepository;
+import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -20,7 +20,6 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
-import com.project.order.exception.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -57,7 +56,7 @@ public class MultiSellerOrderService {
         this.userServiceClient = userServiceClient;
     }
 
-    // --- Customer Checkout (Multi-Seller Decomposition) ---
+    // --- Customer Checkout (Multi-Seller Decomposition with CircuitBreaker & Saga Compensation) ---
     @Transactional
     public ParentOrderDto checkout(Long customerId, String customerEmail, CreateOrderRequest request) {
         log.info("Processing multi-seller checkout for customerId={}, items={}", customerId, request.getItems().size());
@@ -66,7 +65,11 @@ public class MultiSellerOrderService {
             throw new BadRequestException("Order must contain at least one item");
         }
 
-        // 1. Prepare Stock Reservation Feign Call
+        // 1. Generate Order Number
+        String datePrefix = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd"));
+        String parentOrderNumber = "ORD-" + datePrefix + "-" + String.format("%05d", RANDOM.nextInt(100000));
+
+        // 2. Prepare Stock Reservation Feign Call
         List<StockReservationItem> reservationItems = request.getItems().stream()
                 .map(item -> StockReservationItem.builder()
                         .productId(item.getProductId())
@@ -74,107 +77,124 @@ public class MultiSellerOrderService {
                         .build())
                 .toList();
 
-        var stockRes = productServiceClient.reserveStock(
-                StockReservationRequest.builder().items(reservationItems).build()
-        );
-        StockReservationResponse stockResponse = stockRes != null ? stockRes.getData() : null;
-
-        if (stockResponse == null || !stockResponse.isReserved()) {
-            throw new BadRequestException("Failed to reserve stock for products in cart");
-        }
-
-        // 2. Fetch product details to map seller IDs
-        Map<Long, ProductDto> productMap = new HashMap<>();
-        for (OrderItemRequest itemReq : request.getItems()) {
-            try {
-                var res = productServiceClient.getProductById(itemReq.getProductId());
-                if (res != null && res.getData() != null) {
-                    productMap.put(itemReq.getProductId(), res.getData());
-                }
-            } catch (Exception e) {
-                log.warn("Could not fetch product detail for productId={}", itemReq.getProductId(), e);
-            }
-        }
-
-        // Group cart items by sellerId (default to 1 if not present)
-        Map<Long, List<OrderItemRequest>> sellerItemsMap = new LinkedHashMap<>();
-        for (OrderItemRequest itemReq : request.getItems()) {
-            ProductDto prod = productMap.get(itemReq.getProductId());
-            Long sellerId = (prod != null && prod.getSellerId() != null) ? prod.getSellerId() : 1L;
-            sellerItemsMap.computeIfAbsent(sellerId, k -> new ArrayList<>()).add(itemReq);
-        }
-
-        // 3. Create Parent Order
-        String datePrefix = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd"));
-        String parentOrderNumber = "ORD-" + datePrefix + "-" + String.format("%05d", RANDOM.nextInt(100000));
-
-        BigDecimal totalAmount = BigDecimal.ZERO;
-        BigDecimal totalShipping = BigDecimal.valueOf(sellerItemsMap.size() * 5.00); // $5 flat per seller shipment
-
-        ParentOrder parentOrder = ParentOrder.builder()
-                .orderNumber(parentOrderNumber)
-                .customerId(customerId)
-                .customerEmail(customerEmail)
-                .totalAmount(BigDecimal.ZERO) // will calculate
-                .shippingFee(totalShipping)
-                .taxAmount(BigDecimal.ZERO)
-                .paymentMethod(request.getPaymentMethod() != null ? request.getPaymentMethod() : "CREDIT_CARD")
-                .paymentStatus("PAID")
-                .derivedStatus(DerivedOrderStatus.PLACED)
-                .shippingAddress(request.getShippingAddress())
-                .shippingCity(request.getShippingCity())
-                .shippingPostalCode(request.getShippingPostalCode())
+        StockReservationRequest stockRequest = StockReservationRequest.builder()
+                .orderTrackingNumber(parentOrderNumber)
+                .items(reservationItems)
                 .build();
 
-        // 4. Split into Sub-Orders per Seller
-        int sellerIndex = 1;
-        for (Map.Entry<Long, List<OrderItemRequest>> entry : sellerItemsMap.entrySet()) {
-            Long sellerId = entry.getKey();
-            List<OrderItemRequest> items = entry.getValue();
+        // 3. Invoke Stock Reservation with CircuitBreaker
+        StockReservationResponse stockResponse = reserveStock(stockRequest);
 
-            String subOrderNumber = "SUB-" + parentOrderNumber + "-S" + sellerId;
-            BigDecimal subtotal = BigDecimal.ZERO;
-
-            SubOrder subOrder = SubOrder.builder()
-                    .subOrderNumber(subOrderNumber)
-                    .sellerId(sellerId)
-                    .subtotal(BigDecimal.ZERO)
-                    .shippingFee(BigDecimal.valueOf(5.00))
-                    .status(SubOrderStatus.PLACED)
-                    .build();
-
-            for (OrderItemRequest itemReq : items) {
-                ProductDto prod = productMap.get(itemReq.getProductId());
-                BigDecimal unitPrice = (prod != null && prod.getPrice() != null) ? prod.getPrice() : BigDecimal.valueOf(99.99);
-                String prodName = (prod != null && prod.getName() != null) ? prod.getName() : "Product #" + itemReq.getProductId();
-                String sku = (prod != null && prod.getSku() != null) ? prod.getSku() : "SKU-" + itemReq.getProductId();
-                BigDecimal itemSubtotal = unitPrice.multiply(BigDecimal.valueOf(itemReq.getQuantity()));
-
-                subtotal = subtotal.add(itemSubtotal);
-
-                SubOrderItem item = SubOrderItem.builder()
-                        .productId(itemReq.getProductId())
-                        .productName(prodName)
-                        .sku(sku)
-                        .unitPrice(unitPrice)
-                        .quantity(itemReq.getQuantity())
-                        .subtotal(itemSubtotal)
-                        .build();
-
-                subOrder.addItem(item);
-            }
-
-            subOrder.setSubtotal(subtotal);
-            totalAmount = totalAmount.add(subtotal);
-            parentOrder.addSubOrder(subOrder);
-            sellerIndex++;
+        if (stockResponse == null || !stockResponse.isReserved() || stockResponse.getConfirmedItems() == null || stockResponse.getConfirmedItems().isEmpty()) {
+            throw new BadRequestException("Failed to reserve stock for products in cart: " +
+                    (stockResponse != null ? stockResponse.getFailureReason() : "No response from product service"));
         }
 
-        parentOrder.setTotalAmount(totalAmount.add(totalShipping));
-        ParentOrder saved = parentOrderRepository.save(parentOrder);
-        log.info("Created parent order id={}, orderNumber={} with {} sub-orders", saved.getId(), saved.getOrderNumber(), saved.getSubOrders().size());
+        // 4. Group confirmed items by sellerId directly from reservation payload (NO N+1 remote calls!)
+        Map<Long, List<StockReservationItem>> sellerItemsMap = new LinkedHashMap<>();
+        for (StockReservationItem item : stockResponse.getConfirmedItems()) {
+            Long sellerId = (item.getSellerId() != null) ? item.getSellerId() : 1L;
+            sellerItemsMap.computeIfAbsent(sellerId, k -> new ArrayList<>()).add(item);
+        }
 
-        return mapParentToDto(saved);
+        try {
+            BigDecimal totalAmount = BigDecimal.ZERO;
+            BigDecimal totalShipping = BigDecimal.valueOf(sellerItemsMap.size() * 5.00); // $5 flat per seller shipment
+
+            ParentOrder parentOrder = ParentOrder.builder()
+                    .orderNumber(parentOrderNumber)
+                    .customerId(customerId)
+                    .customerEmail(customerEmail)
+                    .totalAmount(BigDecimal.ZERO) // will calculate
+                    .shippingFee(totalShipping)
+                    .taxAmount(BigDecimal.ZERO)
+                    .paymentMethod(request.getPaymentMethod() != null ? request.getPaymentMethod() : "CREDIT_CARD")
+                    .paymentStatus("PAID")
+                    .derivedStatus(DerivedOrderStatus.PLACED)
+                    .shippingAddress(request.getShippingAddress())
+                    .shippingCity(request.getShippingCity())
+                    .shippingPostalCode(request.getShippingPostalCode())
+                    .build();
+
+            // 5. Split into Sub-Orders per Seller
+            for (Map.Entry<Long, List<StockReservationItem>> entry : sellerItemsMap.entrySet()) {
+                Long sellerId = entry.getKey();
+                List<StockReservationItem> items = entry.getValue();
+
+                String subOrderNumber = "SUB-" + parentOrderNumber + "-S" + sellerId;
+                BigDecimal subtotal = BigDecimal.ZERO;
+
+                SubOrder subOrder = SubOrder.builder()
+                        .subOrderNumber(subOrderNumber)
+                        .sellerId(sellerId)
+                        .subtotal(BigDecimal.ZERO)
+                        .shippingFee(BigDecimal.valueOf(5.00))
+                        .status(SubOrderStatus.PLACED)
+                        .build();
+
+                for (StockReservationItem item : items) {
+                    BigDecimal unitPrice = item.getUnitPrice() != null ? item.getUnitPrice() : BigDecimal.valueOf(99.99);
+                    String prodName = item.getProductName() != null ? item.getProductName() : "Product #" + item.getProductId();
+                    String sku = item.getSku() != null ? item.getSku() : "SKU-" + item.getProductId();
+                    BigDecimal itemSubtotal = item.getSubtotal() != null ? item.getSubtotal() : unitPrice.multiply(BigDecimal.valueOf(item.getQuantity()));
+
+                    subtotal = subtotal.add(itemSubtotal);
+
+                    SubOrderItem orderItem = SubOrderItem.builder()
+                            .productId(item.getProductId())
+                            .productName(prodName)
+                            .sku(sku)
+                            .unitPrice(unitPrice)
+                            .quantity(item.getQuantity())
+                            .subtotal(itemSubtotal)
+                            .build();
+
+                    subOrder.addItem(orderItem);
+                }
+
+                subOrder.setSubtotal(subtotal);
+                totalAmount = totalAmount.add(subtotal);
+                parentOrder.addSubOrder(subOrder);
+            }
+
+            parentOrder.setTotalAmount(totalAmount.add(totalShipping));
+            ParentOrder saved = parentOrderRepository.save(parentOrder);
+            log.info("Created parent order id={}, orderNumber={} with {} sub-orders", saved.getId(), saved.getOrderNumber(), saved.getSubOrders().size());
+
+            return mapParentToDto(saved);
+        } catch (Exception ex) {
+            log.error("Failed to persist parent order for {}. Triggering compensating stock release Saga!", parentOrderNumber, ex);
+            try {
+                productServiceClient.releaseStock(
+                        StockReleaseRequest.builder()
+                                .orderTrackingNumber(parentOrderNumber)
+                                .items(reservationItems)
+                                .build()
+                );
+                log.info("Compensating stock rollback succeeded for order: {}", parentOrderNumber);
+            } catch (Exception rollbackEx) {
+                log.error("Failed to execute compensating stock release for order: {}", parentOrderNumber, rollbackEx);
+            }
+            throw ex;
+        }
+    }
+
+    @CircuitBreaker(name = "productService", fallbackMethod = "reserveStockFallback")
+    public StockReservationResponse reserveStock(StockReservationRequest stockRequest) {
+        log.info("Invoking Product Service reserveStock via Feign for order: {}", stockRequest.getOrderTrackingNumber());
+        var stockRes = productServiceClient.reserveStock(stockRequest);
+        if (stockRes != null && stockRes.isSuccess() && stockRes.getData() != null) {
+            return stockRes.getData();
+        }
+        throw new BadRequestException("Product service could not fulfill stock reservation: " +
+                (stockRes != null ? stockRes.getMessage() : "Unknown error"));
+    }
+
+    public StockReservationResponse reserveStockFallback(StockReservationRequest request, Throwable throwable) {
+        log.error("CircuitBreaker fallback triggered for Product Service during checkout: {}", throwable.getMessage());
+        throw new ServiceUnavailableException(
+                "Product & Inventory Service is currently unavailable or degraded. Please try placing your order again in a moment. (CircuitBreaker Active)"
+        );
     }
 
     // --- Customer Read & Cancel ---

@@ -29,8 +29,11 @@ public class SellerProductController {
             @RequestParam(defaultValue = "0", name = "page") int page,
             @RequestParam(defaultValue = "20", name = "size") int size
     ) {
-        Long effectiveSellerId = sellerId != null ? sellerId : 1L;
-        Page<ProductDto> products = productService.getSellerProducts(effectiveSellerId, page, size);
+        if (sellerId == null) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(ApiResponse.failure("Access denied: Seller store identification required"));
+        }
+        Page<ProductDto> products = productService.getSellerProducts(sellerId, page, size);
         return ResponseEntity.ok(ApiResponse.success(products, "Seller products retrieved"));
     }
 
@@ -40,8 +43,11 @@ public class SellerProductController {
             @RequestHeader(value = "X-Seller-Id", required = false) Long sellerId,
             @Valid @RequestBody CreateProductRequest request
     ) {
-        Long effectiveSellerId = sellerId != null ? sellerId : 1L;
-        ProductDto created = productService.createSellerProduct(effectiveSellerId, request);
+        if (sellerId == null) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(ApiResponse.failure("Access denied: Seller store identification required"));
+        }
+        ProductDto created = productService.createSellerProduct(sellerId, request);
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.success(created, "Product submitted for review"));
     }
@@ -53,8 +59,11 @@ public class SellerProductController {
             @PathVariable("id") Long id,
             @Valid @RequestBody UpdateProductRequest request
     ) {
-        Long effectiveSellerId = sellerId != null ? sellerId : 1L;
-        ProductDto updated = productService.updateSellerProduct(effectiveSellerId, id, request);
+        if (sellerId == null) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(ApiResponse.failure("Access denied: Seller store identification required"));
+        }
+        ProductDto updated = productService.updateSellerProduct(sellerId, id, request);
         return ResponseEntity.ok(ApiResponse.success(updated, "Product updated successfully"));
     }
 
@@ -65,8 +74,11 @@ public class SellerProductController {
             @PathVariable("id") Long id,
             @Valid @RequestBody StockUpdateRequest request
     ) {
-        Long effectiveSellerId = sellerId != null ? sellerId : 1L;
-        ProductDto updated = productService.updateSellerStock(effectiveSellerId, id, request.getStockQuantity());
+        if (sellerId == null) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(ApiResponse.failure("Access denied: Seller store identification required"));
+        }
+        ProductDto updated = productService.updateSellerStock(sellerId, id, request.getStockQuantity());
         return ResponseEntity.ok(ApiResponse.success(updated, "Stock quantity updated"));
     }
 
@@ -76,8 +88,11 @@ public class SellerProductController {
             @RequestHeader(value = "X-Seller-Id", required = false) Long sellerId,
             @PathVariable("id") Long id
     ) {
-        Long effectiveSellerId = sellerId != null ? sellerId : 1L;
-        productService.deleteSellerProduct(effectiveSellerId, id);
+        if (sellerId == null) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(ApiResponse.failure("Access denied: Seller store identification required"));
+        }
+        productService.deleteSellerProduct(sellerId, id);
         return ResponseEntity.ok(ApiResponse.success(null, "Product listing deactivated"));
     }
 }
