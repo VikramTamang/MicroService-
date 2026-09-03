@@ -5,7 +5,7 @@ import { ProductService } from '../../services/product.service';
 import { SellerService } from '../../services/seller.service';
 import { OrderService } from '../../services/order.service';
 import { Product, ProductAuditLog } from '../../models/product.model';
-import { SellerProfile } from '../../models/user.model';
+import { SellerProfile, User, UserStatus } from '../../models/user.model';
 import { ParentOrder } from '../../models/order.model';
 
 @Component({
@@ -18,45 +18,122 @@ import { ParentOrder } from '../../models/order.model';
       <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800 pb-6">
         <div>
           <div class="flex items-center space-x-2">
-            <span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-purple-500/20 text-purple-400 border border-purple-500/30">MARKETPLACE MODERATION</span>
+            <span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-purple-500/20 text-purple-400 border border-purple-500/30">MARKETPLACE MODERATION & GOVERNANCE</span>
             <h1 class="text-3xl font-extrabold font-['Outfit'] text-white">Trust & Compliance Console</h1>
           </div>
-          <p class="text-xs text-slate-400 mt-1">Review merchant product listings, verify seller onboarding applications, and inspect order disputes</p>
+          <p class="text-xs text-slate-400 mt-1">
+            Supervise seller onboardings, moderate catalog product submissions, govern customer accounts, and inspect platform split orders.
+          </p>
         </div>
 
-        <!-- Tab Controls -->
-        <div class="flex items-center space-x-2 bg-slate-900/90 p-1.5 rounded-xl border border-slate-800">
-          <button 
-            (click)="activeTab = 'product_review'" 
-            [class]="activeTab === 'product_review' ? 'bg-purple-600 text-white font-bold' : 'text-slate-400 hover:text-white'"
-            class="px-4 py-2 rounded-lg text-xs transition-all duration-200">
-            Product Approvals ({{ pendingProducts().length }})
-          </button>
-          <button 
-            (click)="activeTab = 'catalog_inventory'" 
-            [class]="activeTab === 'catalog_inventory' ? 'bg-purple-600 text-white font-bold' : 'text-slate-400 hover:text-white'"
-            class="px-4 py-2 rounded-lg text-xs transition-all duration-200">
-            All Products & Dummy Data ({{ allProducts().length }})
-          </button>
-          <button 
-            (click)="activeTab = 'seller_moderation'" 
-            [class]="activeTab === 'seller_moderation' ? 'bg-purple-600 text-white font-bold' : 'text-slate-400 hover:text-white'"
-            class="px-4 py-2 rounded-lg text-xs transition-all duration-200">
-            Seller Verifications ({{ pendingSellers().length }})
-          </button>
-          <button 
-            (click)="activeTab = 'platform_orders'" 
-            [class]="activeTab === 'platform_orders' ? 'bg-purple-600 text-white font-bold' : 'text-slate-400 hover:text-white'"
-            class="px-4 py-2 rounded-lg text-xs transition-all duration-200">
-            Platform Orders (View-Only)
-          </button>
+        <button (click)="loadData()" class="self-start sm:self-auto px-4 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-700 text-xs font-semibold text-slate-300 transition-colors flex items-center space-x-2">
+          <span>🔄</span>
+          <span>Refresh Metrics</span>
+        </button>
+      </div>
+
+      <!-- Action Center KPI Cards -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <!-- KPI 1: Pending Products -->
+        <div (click)="activeTab = 'product_review'" class="cursor-pointer glass-card rounded-2xl p-5 border border-slate-800 hover:border-amber-500/40 transition-all space-y-2">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Pending Products</span>
+            <span class="w-8 h-8 rounded-xl bg-amber-500/10 text-amber-400 flex items-center justify-center text-sm">📦</span>
+          </div>
+          <div class="flex items-baseline space-x-2">
+            <span class="text-3xl font-extrabold text-white font-['Outfit']">{{ pendingProducts().length }}</span>
+            <span class="text-[11px] text-amber-400 font-medium">Awaiting review</span>
+          </div>
+        </div>
+
+        <!-- KPI 2: Pending Sellers -->
+        <div (click)="activeTab = 'seller_moderation'" class="cursor-pointer glass-card rounded-2xl p-5 border border-slate-800 hover:border-cyan-500/40 transition-all space-y-2">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Seller Applications</span>
+            <span class="w-8 h-8 rounded-xl bg-cyan-500/10 text-cyan-400 flex items-center justify-center text-sm">🏪</span>
+          </div>
+          <div class="flex items-baseline space-x-2">
+            <span class="text-3xl font-extrabold text-white font-['Outfit']">{{ pendingSellers().length }}</span>
+            <span class="text-[11px] text-cyan-400 font-medium">Verification pending</span>
+          </div>
+        </div>
+
+        <!-- KPI 3: Total Active Listings -->
+        <div (click)="activeTab = 'catalog_inventory'" class="cursor-pointer glass-card rounded-2xl p-5 border border-slate-800 hover:border-emerald-500/40 transition-all space-y-2">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Catalog Inventory</span>
+            <span class="w-8 h-8 rounded-xl bg-emerald-500/10 text-emerald-400 flex items-center justify-center text-sm">🏷️</span>
+          </div>
+          <div class="flex items-baseline space-x-2">
+            <span class="text-3xl font-extrabold text-white font-['Outfit']">{{ allProducts().length }}</span>
+            <span class="text-[11px] text-slate-400 font-medium">Total products</span>
+          </div>
+        </div>
+
+        <!-- KPI 4: Registered Customers -->
+        <div (click)="activeTab = 'customer_management'" class="cursor-pointer glass-card rounded-2xl p-5 border border-slate-800 hover:border-purple-500/40 transition-all space-y-2">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Registered Buyers</span>
+            <span class="w-8 h-8 rounded-xl bg-purple-500/10 text-purple-400 flex items-center justify-center text-sm">👥</span>
+          </div>
+          <div class="flex items-baseline space-x-2">
+            <span class="text-3xl font-extrabold text-white font-['Outfit']">{{ customers().length }}</span>
+            <span class="text-[11px] text-purple-400 font-medium">Marketplace users</span>
+          </div>
         </div>
       </div>
 
-      <!-- Alert -->
+      <!-- Tab Controls Navigation -->
+      <div class="flex items-center space-x-2 overflow-x-auto pb-2 border-b border-slate-800/80">
+        <button 
+          (click)="activeTab = 'product_review'" 
+          [class]="activeTab === 'product_review' ? 'bg-purple-600 text-white font-bold shadow-md shadow-purple-600/20' : 'bg-slate-900/80 text-slate-400 hover:text-white border border-slate-800'"
+          class="px-4 py-2.5 rounded-xl text-xs whitespace-nowrap transition-all duration-200 flex items-center space-x-2">
+          <span>📦 Product Approvals</span>
+          @if (pendingProducts().length > 0) {
+            <span class="px-1.5 py-0.5 rounded-full text-[10px] bg-amber-500 text-slate-950 font-extrabold">{{ pendingProducts().length }}</span>
+          }
+        </button>
+
+        <button 
+          (click)="activeTab = 'catalog_inventory'" 
+          [class]="activeTab === 'catalog_inventory' ? 'bg-purple-600 text-white font-bold shadow-md shadow-purple-600/20' : 'bg-slate-900/80 text-slate-400 hover:text-white border border-slate-800'"
+          class="px-4 py-2.5 rounded-xl text-xs whitespace-nowrap transition-all duration-200">
+          🏷️ All Catalog Listings ({{ allProducts().length }})
+        </button>
+
+        <button 
+          (click)="activeTab = 'seller_moderation'" 
+          [class]="activeTab === 'seller_moderation' ? 'bg-purple-600 text-white font-bold shadow-md shadow-purple-600/20' : 'bg-slate-900/80 text-slate-400 hover:text-white border border-slate-800'"
+          class="px-4 py-2.5 rounded-xl text-xs whitespace-nowrap transition-all duration-200 flex items-center space-x-2">
+          <span>🏪 Seller Verifications</span>
+          @if (pendingSellers().length > 0) {
+            <span class="px-1.5 py-0.5 rounded-full text-[10px] bg-cyan-500 text-slate-950 font-extrabold">{{ pendingSellers().length }}</span>
+          }
+        </button>
+
+        <button 
+          (click)="activeTab = 'customer_management'" 
+          [class]="activeTab === 'customer_management' ? 'bg-purple-600 text-white font-bold shadow-md shadow-purple-600/20' : 'bg-slate-900/80 text-slate-400 hover:text-white border border-slate-800'"
+          class="px-4 py-2.5 rounded-xl text-xs whitespace-nowrap transition-all duration-200">
+          👥 Customer Management ({{ customers().length }})
+        </button>
+
+        <button 
+          (click)="activeTab = 'platform_orders'" 
+          [class]="activeTab === 'platform_orders' ? 'bg-purple-600 text-white font-bold shadow-md shadow-purple-600/20' : 'bg-slate-900/80 text-slate-400 hover:text-white border border-slate-800'"
+          class="px-4 py-2.5 rounded-xl text-xs whitespace-nowrap transition-all duration-200">
+          📋 Platform Orders Audit ({{ platformOrders().length }})
+        </button>
+      </div>
+
+      <!-- Alert Toast -->
       @if (alertMessage()) {
-        <div class="p-3.5 rounded-xl bg-purple-500/10 border border-purple-500/30 text-purple-300 text-xs flex items-center justify-between">
-          <span>{{ alertMessage() }}</span>
+        <div class="p-4 rounded-2xl bg-purple-500/10 border border-purple-500/30 text-purple-300 text-xs flex items-center justify-between shadow-lg">
+          <div class="flex items-center space-x-2">
+            <span>🛡️</span>
+            <span>{{ alertMessage() }}</span>
+          </div>
           <button (click)="alertMessage.set(null)" class="text-slate-400 hover:text-white">&times;</button>
         </div>
       }
@@ -64,23 +141,21 @@ import { ParentOrder } from '../../models/order.model';
       <!-- TAB 1: PRODUCT APPROVALS -->
       @if (activeTab === 'product_review') {
         <div class="space-y-6">
-          <div class="flex justify-between items-center">
-            <div>
-              <h3 class="text-lg font-bold text-white">Pending Product Submissions</h3>
-              <p class="text-xs text-slate-400">Review specifications, image quality, and pricing compliance before publishing to the catalog.</p>
-            </div>
+          <div>
+            <h3 class="text-lg font-bold text-white">Pending Product Submissions</h3>
+            <p class="text-xs text-slate-400">Approve compliant merchant listings or reject with explicit feedback to trigger seller notification.</p>
           </div>
 
-          <div class="glass-card rounded-2xl overflow-hidden border border-slate-800">
+          <div class="glass-card rounded-3xl overflow-hidden border border-slate-800 shadow-xl">
             <div class="overflow-x-auto">
               <table class="w-full text-left text-xs text-slate-300">
-                <thead class="bg-slate-900/80 text-[11px] uppercase tracking-wider text-slate-400 border-b border-slate-800">
+                <thead class="bg-slate-900/90 text-[11px] uppercase tracking-wider text-slate-400 border-b border-slate-800">
                   <tr>
-                    <th class="p-4">Product</th>
-                    <th class="p-4">Seller ID</th>
+                    <th class="p-4">Product Details</th>
+                    <th class="p-4">Merchant ID</th>
                     <th class="p-4">Price</th>
-                    <th class="p-4">Stock</th>
-                    <th class="p-4">Submission Date</th>
+                    <th class="p-4">Inventory</th>
+                    <th class="p-4">Submitted At</th>
                     <th class="p-4 text-right">Moderation Actions</th>
                   </tr>
                 </thead>
@@ -88,31 +163,33 @@ import { ParentOrder } from '../../models/order.model';
                   @for (p of pendingProducts(); track p.id) {
                     <tr class="hover:bg-slate-800/30 transition-colors">
                       <td class="p-4 font-medium text-white flex items-center space-x-3">
-                        <div class="w-12 h-12 rounded-xl bg-slate-800 overflow-hidden flex-shrink-0 border border-slate-700">
+                        <div class="w-12 h-12 rounded-xl bg-slate-800 overflow-hidden flex-shrink-0 border border-slate-700 flex items-center justify-center">
                           @if (p.imageUrl) {
                             <img [src]="p.imageUrl" [alt]="p.name" class="w-full h-full object-cover" />
+                          } @else {
+                            <span class="text-slate-600 text-[10px]">No Img</span>
                           }
                         </div>
                         <div>
-                          <span class="block font-bold text-sm">{{ p.name }}</span>
+                          <span class="block font-bold text-sm text-white">{{ p.name }}</span>
                           <span class="text-[11px] text-slate-400 line-clamp-1">{{ p.description }}</span>
                         </div>
                       </td>
-                      <td class="p-4 font-mono text-emerald-400">Seller #{{ p.sellerId }}</td>
+                      <td class="p-4 font-mono text-cyan-400 font-semibold">Seller #{{ p.sellerId }}</td>
                       <td class="p-4 font-bold text-white font-['Outfit']">\${{ p.price.toFixed(2) }}</td>
                       <td class="p-4">{{ p.stockQuantity }} units</td>
                       <td class="p-4 text-slate-500">{{ p.createdAt | date:'short' }}</td>
                       <td class="p-4 text-right space-x-2">
-                        <button (click)="approveProduct(p.id)" class="px-3.5 py-1.5 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs shadow-md shadow-emerald-500/20">
+                        <button (click)="approveProduct(p.id)" class="px-3.5 py-1.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs shadow-md shadow-emerald-500/20 transition-all">
                           Approve ✅
                         </button>
-                        <button (click)="openRejectModal(p.id)" class="px-3.5 py-1.5 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/30 font-bold text-xs">
+                        <button (click)="openRejectModal(p.id)" class="px-3.5 py-1.5 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/30 font-bold text-xs transition-colors">
                           Reject ❌
                         </button>
-                        <button (click)="viewAuditLogs(p.id)" class="px-2.5 py-1.5 rounded-lg bg-slate-850 hover:bg-slate-800 text-slate-300 text-xs border border-slate-700">
-                          Audit
+                        <button (click)="viewAuditLogs(p.id)" class="px-2.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs border border-slate-700 transition-colors">
+                          Audit Log
                         </button>
-                        <button (click)="deleteProduct(p.id)" class="px-2.5 py-1.5 rounded-lg bg-rose-950/60 hover:bg-rose-900/80 text-rose-300 text-xs border border-rose-800" title="Delete listing permanently">
+                        <button (click)="deleteProduct(p.id)" class="px-2.5 py-1.5 rounded-xl bg-rose-950/60 hover:bg-rose-900 text-rose-300 text-xs border border-rose-800 transition-colors" title="Delete listing">
                           🗑️
                         </button>
                       </td>
@@ -120,8 +197,8 @@ import { ParentOrder } from '../../models/order.model';
                   }
                   @if (pendingProducts().length === 0) {
                     <tr>
-                      <td colspan="6" class="p-8 text-center text-slate-500">
-                        🎉 All product listings are reviewed! No pending submissions.
+                      <td colspan="6" class="p-12 text-center text-slate-500">
+                        🎉 All product submissions are up to date! No pending review items.
                       </td>
                     </tr>
                   }
@@ -132,37 +209,33 @@ import { ParentOrder } from '../../models/order.model';
         </div>
       }
 
-      <!-- TAB: CATALOG INVENTORY & DUMMY DATA PURGE -->
+      <!-- TAB 2: CATALOG INVENTORY -->
       @if (activeTab === 'catalog_inventory') {
         <div class="space-y-6">
           <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
-              <h3 class="text-lg font-bold text-white">Marketplace Catalog Inventory</h3>
-              <p class="text-xs text-slate-400">View all products across active, pending, and suspended states. Delete or purge dummy test data permanently.</p>
+              <h3 class="text-lg font-bold text-white">Full Marketplace Catalog</h3>
+              <p class="text-xs text-slate-400">Search and audit all active, rejected, and suspended products across all sellers.</p>
             </div>
             <div class="flex items-center space-x-3">
               <input 
                 type="text" 
                 [(ngModel)]="searchQuery" 
-                placeholder="Search products..." 
-                class="px-3.5 py-1.5 rounded-xl bg-slate-900 border border-slate-800 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-purple-500" />
-              <button (click)="loadData()" class="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-slate-300 transition-colors">
-                Refresh 🔄
-              </button>
+                placeholder="Search products by title, sku, seller..." 
+                class="px-3.5 py-2 rounded-xl bg-slate-900 border border-slate-800 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-purple-500" />
             </div>
           </div>
 
-          <div class="glass-card rounded-2xl overflow-hidden border border-slate-800">
+          <div class="glass-card rounded-3xl overflow-hidden border border-slate-800 shadow-xl">
             <div class="overflow-x-auto">
               <table class="w-full text-left text-xs text-slate-300">
-                <thead class="bg-slate-900/80 text-[11px] uppercase tracking-wider text-slate-400 border-b border-slate-800">
+                <thead class="bg-slate-900/90 text-[11px] uppercase tracking-wider text-slate-400 border-b border-slate-800">
                   <tr>
                     <th class="p-4">ID</th>
-                    <th class="p-4">Product Details</th>
-                    <th class="p-4">Seller ID</th>
-                    <th class="p-4">Category</th>
+                    <th class="p-4">Product</th>
+                    <th class="p-4">Merchant</th>
                     <th class="p-4">Price / Stock</th>
-                    <th class="p-4">Lifecycle Status</th>
+                    <th class="p-4">Status</th>
                     <th class="p-4 text-right">Action</th>
                   </tr>
                 </thead>
@@ -171,21 +244,22 @@ import { ParentOrder } from '../../models/order.model';
                     <tr class="hover:bg-slate-800/30 transition-colors">
                       <td class="p-4 font-mono text-slate-500">#{{ p.id }}</td>
                       <td class="p-4 font-medium text-white flex items-center space-x-3">
-                        <div class="w-10 h-10 rounded-xl bg-slate-800 overflow-hidden flex-shrink-0 border border-slate-700">
+                        <div class="w-10 h-10 rounded-xl bg-slate-800 overflow-hidden flex-shrink-0 border border-slate-700 flex items-center justify-center">
                           @if (p.imageUrl) {
                             <img [src]="p.imageUrl" [alt]="p.name" class="w-full h-full object-cover" />
+                          } @else {
+                            <span class="text-slate-600 text-[10px]">No Img</span>
                           }
                         </div>
                         <div>
                           <span class="block font-bold text-sm text-white">{{ p.name }}</span>
-                          <span class="text-[11px] text-slate-400 line-clamp-1">{{ p.description }}</span>
+                          <span class="text-[10px] text-slate-500 font-mono">{{ p.sku || 'SKU-00' + p.id }}</span>
                         </div>
                       </td>
-                      <td class="p-4 font-mono text-purple-400">Seller #{{ p.sellerId }}</td>
-                      <td class="p-4 text-slate-300">{{ p.categoryName || 'General' }}</td>
+                      <td class="p-4 font-mono text-cyan-400">Seller #{{ p.sellerId }}</td>
                       <td class="p-4">
                         <span class="font-bold text-white font-['Outfit']">\${{ p.price.toFixed(2) }}</span>
-                        <span class="block text-[10px] text-slate-400">{{ p.stockQuantity }} in stock</span>
+                        <span class="block text-[10px] text-slate-400">{{ p.stockQuantity }} units</span>
                       </td>
                       <td class="p-4">
                         <span [class]="getProductStatusClass(p.status)" class="px-2.5 py-0.5 rounded-full text-[10px] font-bold border">
@@ -193,7 +267,16 @@ import { ParentOrder } from '../../models/order.model';
                         </span>
                       </td>
                       <td class="p-4 text-right space-x-2">
-                        <button (click)="viewAuditLogs(p.id)" class="px-2.5 py-1.5 rounded-lg bg-slate-850 hover:bg-slate-800 text-slate-300 text-xs border border-slate-700">
+                        @if (p.status === 'ACTIVE') {
+                          <button (click)="suspendProduct(p.id)" class="px-2.5 py-1.5 rounded-lg bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border border-amber-500/30 text-xs font-semibold">
+                            Suspend
+                          </button>
+                        } @else if (p.status === 'SUSPENDED' || p.status === 'REJECTED') {
+                          <button (click)="approveProduct(p.id)" class="px-2.5 py-1.5 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-xs font-semibold">
+                            Approve
+                          </button>
+                        }
+                        <button (click)="viewAuditLogs(p.id)" class="px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs border border-slate-700">
                           Audit
                         </button>
                         <button (click)="deleteProduct(p.id)" class="px-3 py-1.5 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/30 text-xs font-bold transition-colors">
@@ -204,9 +287,7 @@ import { ParentOrder } from '../../models/order.model';
                   }
                   @if (filteredAllProducts().length === 0) {
                     <tr>
-                      <td colspan="7" class="p-8 text-center text-slate-500">
-                        No products found.
-                      </td>
+                      <td colspan="6" class="p-12 text-center text-slate-500">No matching products found.</td>
                     </tr>
                   }
                 </tbody>
@@ -216,22 +297,20 @@ import { ParentOrder } from '../../models/order.model';
         </div>
       }
 
-      <!-- TAB 2: SELLER MODERATION -->
+      <!-- TAB 3: SELLER MODERATION -->
       @if (activeTab === 'seller_moderation') {
         <div class="space-y-6">
-          <div class="flex justify-between items-center">
-            <div>
-              <h3 class="text-lg font-bold text-white">Seller Onboarding Applications</h3>
-              <p class="text-xs text-slate-400">Verify business credentials, tax IDs, and approve merchant storefronts.</p>
-            </div>
+          <div>
+            <h3 class="text-lg font-bold text-white">Seller Onboarding Applications</h3>
+            <p class="text-xs text-slate-400">Verify business registration credentials and approve verified merchant accounts.</p>
           </div>
 
-          <div class="glass-card rounded-2xl overflow-hidden border border-slate-800">
+          <div class="glass-card rounded-3xl overflow-hidden border border-slate-800 shadow-xl">
             <div class="overflow-x-auto">
               <table class="w-full text-left text-xs text-slate-300">
-                <thead class="bg-slate-900/80 text-[11px] uppercase tracking-wider text-slate-400 border-b border-slate-800">
+                <thead class="bg-slate-900/90 text-[11px] uppercase tracking-wider text-slate-400 border-b border-slate-800">
                   <tr>
-                    <th class="p-4">Store Name</th>
+                    <th class="p-4">Store Profile</th>
                     <th class="p-4">Business Reg #</th>
                     <th class="p-4">Tax ID</th>
                     <th class="p-4">Status</th>
@@ -243,7 +322,10 @@ import { ParentOrder } from '../../models/order.model';
                     <tr class="hover:bg-slate-800/30 transition-colors">
                       <td class="p-4 font-bold text-white">
                         {{ s.storeName }}
-                        <span class="block text-[10px] text-slate-500 font-mono">{{ s.storeSlug }}</span>
+                        <span class="block text-[10px] text-slate-400 font-mono">{{ s.storeSlug }}</span>
+                        @if (s.storeDescription) {
+                          <span class="block text-[11px] text-slate-400 font-normal mt-0.5 line-clamp-1">{{ s.storeDescription }}</span>
+                        }
                       </td>
                       <td class="p-4 font-mono text-slate-300">{{ s.businessRegistrationNumber || 'N/A' }}</td>
                       <td class="p-4 font-mono text-slate-300">{{ s.taxIdentificationNumber || 'N/A' }}</td>
@@ -254,22 +336,27 @@ import { ParentOrder } from '../../models/order.model';
                       </td>
                       <td class="p-4 text-right space-x-2">
                         @if (s.verificationStatus === 'PENDING') {
-                          <button (click)="approveSeller(s.id)" class="px-3 py-1.5 rounded-lg bg-emerald-500 text-slate-950 font-bold text-xs">
+                          <button (click)="approveSeller(s.id)" class="px-3.5 py-1.5 rounded-xl bg-emerald-500 text-slate-950 font-bold text-xs shadow-md shadow-emerald-500/20">
                             Approve
                           </button>
-                          <button (click)="rejectSeller(s.id)" class="px-3 py-1.5 rounded-lg bg-rose-500/10 text-rose-400 border border-rose-500/30 text-xs">
+                          <button (click)="rejectSeller(s.id)" class="px-3.5 py-1.5 rounded-xl bg-rose-500/10 text-rose-400 border border-rose-500/30 text-xs font-bold">
                             Reject
                           </button>
                         } @else if (s.verificationStatus === 'APPROVED') {
-                          <button (click)="suspendSeller(s.id)" class="px-3 py-1.5 rounded-lg bg-amber-500/10 text-amber-400 border border-amber-500/30 text-xs">
+                          <button (click)="suspendSeller(s.id)" class="px-3 py-1.5 rounded-xl bg-amber-500/10 text-amber-400 border border-amber-500/30 text-xs font-bold">
                             Suspend
                           </button>
                         } @else {
-                          <button (click)="approveSeller(s.id)" class="px-3 py-1.5 rounded-lg bg-slate-800 text-slate-300 text-xs">
+                          <button (click)="approveSeller(s.id)" class="px-3 py-1.5 rounded-xl bg-slate-800 text-slate-300 text-xs font-bold hover:bg-slate-700">
                             Reactivate
                           </button>
                         }
                       </td>
+                    </tr>
+                  }
+                  @if (allSellers().length === 0) {
+                    <tr>
+                      <td colspan="5" class="p-12 text-center text-slate-500">No seller applications on record.</td>
                     </tr>
                   }
                 </tbody>
@@ -279,23 +366,95 @@ import { ParentOrder } from '../../models/order.model';
         </div>
       }
 
-      <!-- TAB 3: PLATFORM ORDERS (VIEW ONLY) -->
+      <!-- TAB 4: CUSTOMER MANAGEMENT -->
+      @if (activeTab === 'customer_management') {
+        <div class="space-y-6">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+              <h3 class="text-lg font-bold text-white">Marketplace Customer Accounts</h3>
+              <p class="text-xs text-slate-400">Manage buyer accounts, review contact details, and suspend/reactivate accounts for trust & safety.</p>
+            </div>
+            <input 
+              type="text" 
+              [(ngModel)]="customerSearchQuery" 
+              placeholder="Search customers by name or email..." 
+              class="px-3.5 py-2 rounded-xl bg-slate-900 border border-slate-800 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-purple-500 max-w-xs w-full" />
+          </div>
+
+          <div class="glass-card rounded-3xl overflow-hidden border border-slate-800 shadow-xl">
+            <div class="overflow-x-auto">
+              <table class="w-full text-left text-xs text-slate-300">
+                <thead class="bg-slate-900/90 text-[11px] uppercase tracking-wider text-slate-400 border-b border-slate-800">
+                  <tr>
+                    <th class="p-4">Customer ID</th>
+                    <th class="p-4">Name & Email</th>
+                    <th class="p-4">Phone</th>
+                    <th class="p-4">Address / City</th>
+                    <th class="p-4">Account Status</th>
+                    <th class="p-4 text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-800/60">
+                  @for (c of filteredCustomers(); track c.id) {
+                    <tr class="hover:bg-slate-800/30 transition-colors">
+                      <td class="p-4 font-mono text-slate-500">#{{ c.id }}</td>
+                      <td class="p-4">
+                        <span class="font-bold text-white block">{{ c.firstName }} {{ c.lastName }}</span>
+                        <span class="text-slate-400 text-[11px] font-mono">{{ c.email }}</span>
+                      </td>
+                      <td class="p-4 text-slate-300">{{ c.phoneNumber || 'N/A' }}</td>
+                      <td class="p-4 text-slate-300">
+                        @if (c.city || c.address) {
+                          <span>{{ c.address }}, {{ c.city }} {{ c.postalCode }}</span>
+                        } @else {
+                          <span class="text-slate-500 italic">Not set</span>
+                        }
+                      </td>
+                      <td class="p-4">
+                        <span [class]="c.status === 'ACTIVE' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30' : 'bg-rose-500/10 text-rose-400 border-rose-500/30'" class="px-2.5 py-0.5 rounded-full text-[10px] font-bold border">
+                          {{ c.status }}
+                        </span>
+                      </td>
+                      <td class="p-4 text-right">
+                        @if (c.status === 'ACTIVE') {
+                          <button (click)="toggleCustomerStatus(c.id, 'SUSPENDED')" class="px-3 py-1.5 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/30 font-bold text-xs transition-colors">
+                            Suspend Account
+                          </button>
+                        } @else {
+                          <button (click)="toggleCustomerStatus(c.id, 'ACTIVE')" class="px-3 py-1.5 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 font-bold text-xs transition-colors">
+                            Reactivate
+                          </button>
+                        }
+                      </td>
+                    </tr>
+                  }
+                  @if (filteredCustomers().length === 0) {
+                    <tr>
+                      <td colspan="6" class="p-12 text-center text-slate-500">No customer accounts match your search.</td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      }
+
+      <!-- TAB 5: PLATFORM ORDERS -->
       @if (activeTab === 'platform_orders') {
         <div class="space-y-6">
-          <div class="flex justify-between items-center">
-            <div>
-              <h3 class="text-lg font-bold text-white">Platform Orders (View-Only / Dispute Audit)</h3>
-              <p class="text-xs text-slate-400">Administrators have view-only access to investigate customer-seller dispute resolutions.</p>
-            </div>
+          <div>
+            <h3 class="text-lg font-bold text-white">Platform Orders (View-Only Dispute & Fulfillment Audit)</h3>
+            <p class="text-xs text-slate-400">Inspect multi-seller split orders and track logistics progress across carriers.</p>
           </div>
 
           <div class="space-y-4">
             @for (order of platformOrders(); track order.id) {
-              <div class="glass-card rounded-2xl p-5 border border-slate-800 space-y-4">
+              <div class="glass-card rounded-3xl p-6 border border-slate-800 space-y-4 shadow-xl">
                 <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-800/80 pb-3">
                   <div class="flex items-center space-x-3">
                     <span class="font-mono font-bold text-emerald-400 text-sm">{{ order.orderNumber }}</span>
-                    <span class="text-xs text-slate-400">Customer: {{ order.customerEmail }}</span>
+                    <span class="text-xs text-slate-400">Buyer: {{ order.customerEmail }}</span>
                   </div>
                   <div class="flex items-center space-x-3">
                     <span class="font-bold text-white font-['Outfit']">\${{ order.totalAmount.toFixed(2) }}</span>
@@ -306,25 +465,28 @@ import { ParentOrder } from '../../models/order.model';
                 </div>
 
                 <!-- Sub-Orders Breakdown -->
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                   @for (sub of order.subOrders; track sub.id) {
-                    <div class="bg-slate-900/80 rounded-xl p-3.5 border border-slate-800 space-y-2">
+                    <div class="bg-slate-900/90 rounded-2xl p-4 border border-slate-800 space-y-2.5">
                       <div class="flex justify-between items-center text-xs">
-                        <span class="font-bold text-white">Shipment (Seller #{{ sub.sellerId }})</span>
-                        <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-800 text-slate-300">
+                        <span class="font-bold text-white">Shipment (Merchant #{{ sub.sellerId }})</span>
+                        <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-800 text-slate-300 border border-slate-700">
                           {{ sub.status }}
                         </span>
                       </div>
                       <div class="text-[11px] text-slate-400 font-mono">
                         {{ sub.subOrderNumber }}
                       </div>
-                      <div class="text-xs text-slate-300">
+                      <div class="text-xs text-slate-300 space-y-1 pt-1 border-t border-slate-800">
                         @for (i of sub.items; track i.id) {
-                          <div>{{ i.quantity }}x {{ i.productName }} (\${{ i.subtotal.toFixed(2) }})</div>
+                          <div class="flex justify-between">
+                            <span>{{ i.quantity }}x {{ i.productName }}</span>
+                            <span class="font-semibold text-white font-['Outfit']">\${{ i.subtotal.toFixed(2) }}</span>
+                          </div>
                         }
                       </div>
                       @if (sub.trackingCode) {
-                        <div class="text-[10px] text-emerald-400 font-mono">
+                        <div class="text-[10px] text-emerald-400 font-mono pt-1">
                           🚚 {{ sub.carrier }}: {{ sub.trackingCode }}
                         </div>
                       }
@@ -333,20 +495,25 @@ import { ParentOrder } from '../../models/order.model';
                 </div>
               </div>
             }
+            @if (platformOrders().length === 0) {
+              <div class="glass-card rounded-3xl p-12 text-center text-slate-500">
+                No customer marketplace orders placed yet.
+              </div>
+            }
           </div>
         </div>
       }
 
-      <!-- Rejection Modal (Reason Required) -->
+      <!-- Rejection Modal -->
       @if (rejectingProductId()) {
         <div class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4">
           <div class="glass-card rounded-3xl p-6 max-w-md w-full border border-slate-700 space-y-4 shadow-2xl">
             <h3 class="text-base font-bold text-white">Reject Product Listing</h3>
-            <p class="text-xs text-slate-400">Please provide a clear reason so the seller can correct and resubmit the listing.</p>
+            <p class="text-xs text-slate-400">Please provide a clear reason so the seller can correct and resubmit.</p>
 
             <div class="space-y-2">
               <label class="text-xs font-medium text-slate-300">Rejection Reason</label>
-              <textarea [(ngModel)]="rejectionReason" rows="3" placeholder="e.g. Low-resolution product image, missing detailed specifications, or price mismatch..." class="w-full p-2.5 bg-slate-900 border border-slate-800 rounded-xl text-slate-200 text-xs focus:outline-none focus:border-rose-500"></textarea>
+              <textarea [(ngModel)]="rejectionReason" rows="3" placeholder="e.g. Incomplete specifications, low image resolution, or policy violation..." class="w-full p-2.5 bg-slate-900 border border-slate-800 rounded-xl text-slate-200 text-xs focus:outline-none focus:border-rose-500"></textarea>
             </div>
 
             <div class="flex justify-end space-x-2 pt-2">
@@ -391,16 +558,18 @@ export class AdminDashboardComponent implements OnInit {
   private sellerService = inject(SellerService);
   private orderService = inject(OrderService);
 
-  activeTab: 'product_review' | 'seller_moderation' | 'platform_orders' | 'catalog_inventory' = 'product_review';
+  activeTab: 'product_review' | 'seller_moderation' | 'customer_management' | 'platform_orders' | 'catalog_inventory' = 'product_review';
 
   pendingProducts = signal<Product[]>([]);
   allProducts = signal<Product[]>([]);
   allSellers = signal<SellerProfile[]>([]);
   pendingSellers = signal<SellerProfile[]>([]);
+  customers = signal<User[]>([]);
   platformOrders = signal<ParentOrder[]>([]);
   alertMessage = signal<string | null>(null);
 
   searchQuery = '';
+  customerSearchQuery = '';
 
   rejectingProductId = signal<number | null>(null);
   rejectionReason = '';
@@ -434,6 +603,14 @@ export class AdminDashboardComponent implements OnInit {
       }
     });
 
+    this.sellerService.getCustomers().subscribe({
+      next: (res) => {
+        if (res.success) {
+          this.customers.set(res.data);
+        }
+      }
+    });
+
     this.orderService.getAllParentOrders(0, 50).subscribe({
       next: (res) => {
         if (res.success) this.platformOrders.set(res.data.content);
@@ -452,6 +629,26 @@ export class AdminDashboardComponent implements OnInit {
     );
   }
 
+  filteredCustomers(): User[] {
+    const q = this.customerSearchQuery.trim().toLowerCase();
+    if (!q) return this.customers();
+    return this.customers().filter(c => 
+      c.firstName.toLowerCase().includes(q) ||
+      c.lastName.toLowerCase().includes(q) ||
+      c.email.toLowerCase().includes(q) ||
+      c.id.toString().includes(q)
+    );
+  }
+
+  toggleCustomerStatus(userId: number, newStatus: UserStatus): void {
+    this.sellerService.updateUserStatus(userId, newStatus, 'Admin moderation action').subscribe({
+      next: () => {
+        this.alertMessage.set(`Customer #${userId} status set to ${newStatus}.`);
+        this.loadData();
+      }
+    });
+  }
+
   deleteProduct(id: number): void {
     if (confirm(`Are you sure you want to permanently delete product #${id} and purge all associated records?`)) {
       this.productService.deleteAdminProduct(id).subscribe({
@@ -467,6 +664,15 @@ export class AdminDashboardComponent implements OnInit {
     this.productService.approveProduct(id).subscribe({
       next: () => {
         this.alertMessage.set(`Product #${id} approved and published to the marketplace catalog.`);
+        this.loadData();
+      }
+    });
+  }
+
+  suspendProduct(id: number): void {
+    this.productService.suspendProduct(id, 'Admin suspension').subscribe({
+      next: () => {
+        this.alertMessage.set(`Product #${id} suspended.`);
         this.loadData();
       }
     });
@@ -546,3 +752,4 @@ export class AdminDashboardComponent implements OnInit {
     }
   }
 }
+

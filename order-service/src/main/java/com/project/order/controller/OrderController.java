@@ -26,15 +26,20 @@ public class OrderController {
     }
 
     @PostMapping
-    @Operation(summary = "Place a new multi-seller marketplace order")
+    @Operation(summary = "Place a new multi-seller marketplace order (Customer only)")
     public ResponseEntity<ApiResponse<ParentOrderDto>> createOrder(
             @RequestHeader(value = "X-User-Id", required = false) Long authUserId,
             @RequestHeader(value = "X-User-Email", required = false) String authUserEmail,
+            @RequestHeader(value = "X-User-Roles", required = false) String authUserRoles,
             @Valid @RequestBody CreateOrderRequest request
     ) {
         if (authUserId == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body(ApiResponse.failure("Authentication required: Missing user identification"));
+        }
+        if (authUserRoles != null && authUserRoles.contains("ROLE_ADMIN")) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(ApiResponse.failure("Action forbidden: Administrators moderate the marketplace and cannot place customer orders"));
         }
         String email = (authUserEmail != null && !authUserEmail.isBlank()) ? authUserEmail : "customer@example.com";
         ParentOrderDto parentOrder = multiSellerOrderService.checkout(authUserId, email, request);

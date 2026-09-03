@@ -30,10 +30,45 @@ export const sellerGuard: CanActivateFn = () => {
   const authService = inject(AuthService);
   const router = inject(Router);
 
-  if (authService.isAuthenticated() && (authService.isSeller() || authService.isAdmin())) {
-    return true;
+  if (authService.isAuthenticated()) {
+    if (authService.isSeller()) {
+      return true;
+    }
+    if (authService.isAdmin()) {
+      router.navigate(['/admin']);
+      return false;
+    }
   }
 
-  router.navigate(['/']);
+  router.navigate(['/login']);
   return false;
+};
+
+export const customerOnlyGuard: CanActivateFn = () => {
+  const authService = inject(AuthService);
+  const router = inject(Router);
+
+  if (authService.isAuthenticated() && authService.isAdmin()) {
+    router.navigate(['/admin']);
+    return false;
+  }
+
+  return true;
+};
+
+export const customerAuthGuard: CanActivateFn = () => {
+  const authService = inject(AuthService);
+  const router = inject(Router);
+
+  if (!authService.isAuthenticated()) {
+    router.navigate(['/login']);
+    return false;
+  }
+
+  if (authService.isAdmin()) {
+    router.navigate(['/admin']);
+    return false;
+  }
+
+  return true;
 };

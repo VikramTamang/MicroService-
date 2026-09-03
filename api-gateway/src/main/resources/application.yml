@@ -43,7 +43,7 @@ spring:
         - id: user-service-admin
           uri: lb://user-service
           predicates:
-            - Path=/api/v1/admin/sellers, /api/v1/admin/sellers/**, /api/v1/admin/users, /api/v1/admin/users/**
+            - Path=/api/v1/admin/sellers, /api/v1/admin/sellers/**, /api/v1/admin/users, /api/v1/admin/users/**, /api/v1/admin/customers, /api/v1/admin/customers/**
 
         # Product and Catalog Service Routes
         - id: product-service-seller

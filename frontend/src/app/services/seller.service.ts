@@ -45,6 +45,10 @@ export class SellerService {
     return this.http.post<ApiResponse<SellerProfile>>(`${this.GATEWAY_URL}/admin/sellers/${id}/suspend`, { reason });
   }
 
+  getCustomers(): Observable<ApiResponse<User[]>> {
+    return this.http.get<ApiResponse<User[]>>(`${this.GATEWAY_URL}/admin/customers`);
+  }
+
   updateUserStatus(userId: number, status: UserStatus, reason?: string): Observable<ApiResponse<User>> {
     return this.http.patch<ApiResponse<User>>(`${this.GATEWAY_URL}/admin/users/${userId}/status`, { status, reason });
   }

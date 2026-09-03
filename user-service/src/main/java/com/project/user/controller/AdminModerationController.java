@@ -66,6 +66,13 @@ public class AdminModerationController {
         return ResponseEntity.ok(ApiResponse.success(profile, "Seller suspended successfully"));
     }
 
+    @GetMapping("/customers")
+    @Operation(summary = "Get all registered marketplace customers (Admin)")
+    public ResponseEntity<ApiResponse<List<UserDto>>> getCustomers() {
+        List<UserDto> customers = userService.getCustomers();
+        return ResponseEntity.ok(ApiResponse.success(customers, "Customers retrieved successfully"));
+    }
+
     @PatchMapping("/users/{id}/status")
     @Operation(summary = "Suspend or reactivate a user account (Admin)")
     public ResponseEntity<ApiResponse<UserDto>> updateUserStatus(

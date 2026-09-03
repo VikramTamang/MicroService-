@@ -48,6 +48,13 @@ public class UserService {
                 .toList();
     }
 
+    @Transactional(readOnly = true)
+    public List<UserDto> getCustomers() {
+        return userRepository.findByRole("ROLE_CUSTOMER").stream()
+                .map(this::mapToDto)
+                .toList();
+    }
+
     @Transactional
     public UserDto updateProfile(String email, UpdateProfileRequest request) {
         log.info("Updating profile for user email: {}", email);

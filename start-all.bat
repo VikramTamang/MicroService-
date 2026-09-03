@@ -10,6 +10,17 @@ echo.
 set "ROOT_DIR=%~dp0"
 cd /d "%ROOT_DIR%"
 
+:: Load environment variables from .env
+set "SPRING_PROFILES_ACTIVE=prod"
+if exist "%ROOT_DIR%.env" (
+    for /f "usebackq tokens=1,* delims==" %%A in ("%ROOT_DIR%.env") do (
+        set "line=%%A"
+        if not "!line:~0,1!"=="#" (
+            set "%%A=%%B"
+        )
+    )
+)
+
 :: Check if Eureka (8761) is running
 netstat -ano | findstr ":8761 " | findstr "LISTENING" >nul 2>&1
 if %errorlevel% equ 0 (
@@ -26,8 +37,8 @@ netstat -ano | findstr ":8081 " | findstr "LISTENING" >nul 2>&1
 if %errorlevel% equ 0 (
     echo [SKIP] User Service is already running on port 8081.
 ) else (
-    echo [STARTING] User Service on port 8081...
-    start "[ApexStore] User Service (8081)" cmd /k "cd /d %ROOT_DIR% && color 0A && echo Starting User Service... && mvnw.cmd -pl user-service spring-boot:run"
+    echo [STARTING] User Service on port 8081 [%SPRING_PROFILES_ACTIVE%]...
+    start "[ApexStore] User Service (8081)" cmd /k "cd /d %ROOT_DIR% && color 0A && echo Starting User Service... && mvnw.cmd -pl user-service spring-boot:run -Dspring-boot.run.profiles=%SPRING_PROFILES_ACTIVE%"
 )
 
 :: Check if Product Service (8082) is running
@@ -35,8 +46,8 @@ netstat -ano | findstr ":8082 " | findstr "LISTENING" >nul 2>&1
 if %errorlevel% equ 0 (
     echo [SKIP] Product Service is already running on port 8082.
 ) else (
-    echo [STARTING] Product Service on port 8082...
-    start "[ApexStore] Product Service (8082)" cmd /k "cd /d %ROOT_DIR% && color 0E && echo Starting Product Service... && mvnw.cmd -pl product-service spring-boot:run"
+    echo [STARTING] Product Service on port 8082 [%SPRING_PROFILES_ACTIVE%]...
+    start "[ApexStore] Product Service (8082)" cmd /k "cd /d %ROOT_DIR% && color 0E && echo Starting Product Service... && mvnw.cmd -pl product-service spring-boot:run -Dspring-boot.run.profiles=%SPRING_PROFILES_ACTIVE%"
 )
 
 :: Check if Order Service (8083) is running
@@ -44,8 +55,8 @@ netstat -ano | findstr ":8083 " | findstr "LISTENING" >nul 2>&1
 if %errorlevel% equ 0 (
     echo [SKIP] Order Service is already running on port 8083.
 ) else (
-    echo [STARTING] Order Service on port 8083...
-    start "[ApexStore] Order Service (8083)" cmd /k "cd /d %ROOT_DIR% && color 0D && echo Starting Order Service... && mvnw.cmd -pl order-service spring-boot:run"
+    echo [STARTING] Order Service on port 8083 [%SPRING_PROFILES_ACTIVE%]...
+    start "[ApexStore] Order Service (8083)" cmd /k "cd /d %ROOT_DIR% && color 0D && echo Starting Order Service... && mvnw.cmd -pl order-service spring-boot:run -Dspring-boot.run.profiles=%SPRING_PROFILES_ACTIVE%"
 )
 
 echo.

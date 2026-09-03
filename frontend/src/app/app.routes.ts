@@ -1,5 +1,5 @@
 import { Routes } from '@angular/router';
-import { authGuard, adminGuard, sellerGuard } from './guards/auth.guard';
+import { adminGuard, sellerGuard, customerOnlyGuard, customerAuthGuard } from './guards/auth.guard';
 
 export const routes: Routes = [
   {
@@ -7,15 +7,26 @@ export const routes: Routes = [
     loadComponent: () => import('./components/catalog/catalog.component').then(m => m.CatalogComponent)
   },
   {
+    path: 'products/:slug',
+    loadComponent: () => import('./components/catalog/product-detail.component').then(m => m.ProductDetailComponent)
+  },
+  {
+    path: 'product/:id',
+    loadComponent: () => import('./components/catalog/product-detail.component').then(m => m.ProductDetailComponent)
+  },
+  {
     path: 'cart',
+    canActivate: [customerOnlyGuard],
     loadComponent: () => import('./components/cart/cart.component').then(m => m.CartComponent)
   },
   {
     path: 'checkout',
+    canActivate: [customerAuthGuard],
     loadComponent: () => import('./components/checkout/checkout.component').then(m => m.CheckoutComponent)
   },
   {
     path: 'my-orders',
+    canActivate: [customerAuthGuard],
     loadComponent: () => import('./components/my-orders/my-orders.component').then(m => m.MyOrdersComponent)
   },
   {

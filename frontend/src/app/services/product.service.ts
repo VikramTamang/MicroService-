@@ -31,6 +31,10 @@ export class ProductService {
     return this.http.get<ApiResponse<Product>>(`${this.GATEWAY_URL}/products/${id}`);
   }
 
+  getProductBySlug(slug: string): Observable<ApiResponse<Product>> {
+    return this.http.get<ApiResponse<Product>>(`${this.GATEWAY_URL}/products/slug/${slug}`);
+  }
+
   getCategories(): Observable<ApiResponse<Category[]>> {
     return this.http.get<ApiResponse<Category[]>>(`${this.GATEWAY_URL}/categories`);
   }

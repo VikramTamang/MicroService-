@@ -2,6 +2,14 @@ import { Injectable, signal, computed, effect } from '@angular/core';
 import { CartItem } from '../models/order.model';
 import { Product } from '../models/product.model';
 
+export interface SellerCartGroup {
+  sellerId: number;
+  sellerStoreName: string;
+  items: CartItem[];
+  subtotal: number;
+  shippingFee: number;
+}
+
 @Injectable({
   providedIn: 'root'
 })
@@ -16,6 +24,35 @@ export class CartService {
 
   subtotal = computed(() => {
     return this.items().reduce((total, item) => total + (item.product.price * item.quantity), 0);
+  });
+
+  sellerGroups = computed<SellerCartGroup[]>(() => {
+    const map = new Map<number, SellerCartGroup>();
+    for (const item of this.items()) {
+      const sellerId = item.product.sellerId || 1;
+      const storeName = item.product.sellerStoreName || (sellerId === 2 ? 'Nordic Home & Living' : 'Apex Electronics Store');
+      if (!map.has(sellerId)) {
+        map.set(sellerId, {
+          sellerId,
+          sellerStoreName: storeName,
+          items: [],
+          subtotal: 0,
+          shippingFee: 5.00
+        });
+      }
+      const group = map.get(sellerId)!;
+      group.items.push(item);
+      group.subtotal += (item.product.price * item.quantity);
+    }
+    return Array.from(map.values());
+  });
+
+  totalShipping = computed(() => {
+    return this.sellerGroups().length * 5.00;
+  });
+
+  grandTotal = computed(() => {
+    return this.subtotal() + this.totalShipping();
   });
 
   constructor() {

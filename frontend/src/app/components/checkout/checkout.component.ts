@@ -113,44 +113,52 @@ import { CreateOrderRequest, ParentOrder } from '../../models/order.model';
             <!-- Summary Column -->
             <div class="lg:col-span-1 space-y-4">
               <div class="glass-card rounded-2xl p-5 border border-slate-800 space-y-4">
-                <h4 class="text-sm font-bold text-white">Cart Summary</h4>
-                <div class="divide-y divide-slate-800/60 max-h-48 overflow-y-auto pr-1">
-                  @for (item of cartService.items(); track item.product.id) {
-                    <div class="py-2 flex justify-between text-xs">
-                      <div>
-                        <p class="font-medium text-slate-200">{{ item.product.name }}</p>
-                        <p class="text-[10px] text-emerald-400 font-medium">{{ item.product.sellerStoreName || 'Apex Electronics Store' }}</p>
-                        <p class="text-[10px] text-slate-400">Qty: {{ item.quantity }} × \${{ item.product.price.toFixed(2) }}</p>
+                <h4 class="text-sm font-bold text-white font-['Outfit']">Multi-Seller Order Breakdown</h4>
+                
+                <!-- Grouped Items by Store -->
+                <div class="space-y-3 max-h-60 overflow-y-auto pr-1">
+                  @for (group of cartService.sellerGroups(); track group.sellerId) {
+                    <div class="p-3 rounded-xl bg-slate-900/90 border border-slate-800 space-y-2">
+                      <div class="flex items-center justify-between text-xs font-bold text-emerald-400 border-b border-slate-800/80 pb-1.5">
+                        <span>🏪 {{ group.sellerStoreName }}</span>
+                        <span class="text-slate-400 font-normal">Split \$5.00</span>
                       </div>
-                      <span class="font-semibold text-white font-['Outfit']">\${{ (item.product.price * item.quantity).toFixed(2) }}</span>
+                      <div class="space-y-1.5">
+                        @for (item of group.items; track item.product.id) {
+                          <div class="flex justify-between text-[11px] text-slate-300">
+                            <span class="truncate max-w-[150px]">{{ item.quantity }}x {{ item.product.name }}</span>
+                            <span class="font-semibold text-white font-['Outfit']">\${{ (item.product.price * item.quantity).toFixed(2) }}</span>
+                          </div>
+                        }
+                      </div>
                     </div>
                   }
                 </div>
 
                 <div class="border-t border-slate-800 pt-3 space-y-2 text-xs">
                   <div class="flex justify-between text-slate-400">
-                    <span>Subtotal</span>
+                    <span>Items Subtotal</span>
                     <span class="text-white font-semibold">\${{ cartService.subtotal().toFixed(2) }}</span>
                   </div>
                   <div class="flex justify-between text-slate-400">
-                    <span>Shipping (Split)</span>
-                    <span class="text-white font-semibold">\$5.00</span>
+                    <span>Total Split Delivery</span>
+                    <span class="text-white font-semibold">\${{ cartService.totalShipping().toFixed(2) }}</span>
                   </div>
                   <div class="flex justify-between text-sm font-bold text-white pt-2 border-t border-slate-800">
-                    <span>Total</span>
-                    <span class="text-emerald-400 font-['Outfit']">\${{ (cartService.subtotal() + 5.00).toFixed(2) }}</span>
+                    <span>Final Amount</span>
+                    <span class="text-emerald-400 font-['Outfit'] text-base">\${{ cartService.grandTotal().toFixed(2) }}</span>
                   </div>
                 </div>
 
                 <button 
                   (click)="submitOrder()"
                   [disabled]="isSubmitting() || cartService.items().length === 0"
-                  class="w-full py-3 rounded-xl bg-emerald-500 hover:bg-emerald-400 disabled:opacity-40 text-slate-950 font-bold text-xs shadow-lg shadow-emerald-500/20 active:scale-[0.99] transition-all duration-200 flex items-center justify-center space-x-2">
+                  class="w-full py-3.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-400 hover:from-emerald-400 hover:to-teal-300 disabled:opacity-40 text-slate-950 font-extrabold text-xs shadow-xl shadow-emerald-500/20 active:scale-[0.99] transition-all duration-200 flex items-center justify-center space-x-2">
                   @if (isSubmitting()) {
                     <div class="w-4 h-4 border-2 border-slate-950 border-t-transparent rounded-full animate-spin"></div>
                     <span>Reserving Stock & Placing Order...</span>
                   } @else {
-                    <span>Place Order Now</span>
+                    <span>Place Marketplace Order Now</span>
                   }
                 </button>
               </div>
