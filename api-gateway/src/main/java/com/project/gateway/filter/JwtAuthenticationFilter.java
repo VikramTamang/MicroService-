@@ -35,6 +35,7 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
 
     private static final List<String> PUBLIC_PREFIXES = List.of(
             "/api/v1/auth/",
+            "/api/v1/users/avatars/",
             "/actuator",
             "/v3/api-docs",
             "/swagger-ui"

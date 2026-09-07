@@ -5,10 +5,10 @@ spring:
   application:
     name: order-service
   profiles:
-    active: dev
+    active: ${SPRING_PROFILES_ACTIVE:dev}
 
   datasource:
-    url: jdbc:h2:mem:orderdb;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE;MODE=MySQL
+    url: jdbc:h2:file:./data/orderdb;DB_CLOSE_DELAY=-1;AUTO_SERVER=TRUE;MODE=MySQL
     driverClassName: org.h2.Driver
     username: sa
     password: ""

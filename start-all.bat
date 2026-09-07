@@ -21,6 +21,12 @@ if exist "%ROOT_DIR%.env" (
     )
 )
 
+if not defined DB_HOST set "DB_HOST=localhost"
+if not defined DB_PORT set "DB_PORT=3306"
+if not defined DB_USER set "DB_USER=root"
+if not defined DB_PASSWORD set "DB_PASSWORD=root"
+set "EXTRA_JVM_ARGS=-Dspring-boot.run.profiles=%SPRING_PROFILES_ACTIVE% -DDB_HOST=%DB_HOST% -DDB_PORT=%DB_PORT% -DDB_USER=%DB_USER% -DDB_PASSWORD=%DB_PASSWORD%"
+
 :: Check if Eureka (8761) is running
 netstat -ano | findstr ":8761 " | findstr "LISTENING" >nul 2>&1
 if %errorlevel% equ 0 (
@@ -38,7 +44,7 @@ if %errorlevel% equ 0 (
     echo [SKIP] User Service is already running on port 8081.
 ) else (
     echo [STARTING] User Service on port 8081 [%SPRING_PROFILES_ACTIVE%]...
-    start "[ApexStore] User Service (8081)" cmd /k "cd /d %ROOT_DIR% && color 0A && echo Starting User Service... && mvnw.cmd -pl user-service spring-boot:run -Dspring-boot.run.profiles=%SPRING_PROFILES_ACTIVE%"
+    start "[ApexStore] User Service (8081)" cmd /k "cd /d %ROOT_DIR% && color 0A && echo Starting User Service... && mvnw.cmd -pl user-service spring-boot:run %EXTRA_JVM_ARGS%"
 )
 
 :: Check if Product Service (8082) is running
@@ -47,7 +53,7 @@ if %errorlevel% equ 0 (
     echo [SKIP] Product Service is already running on port 8082.
 ) else (
     echo [STARTING] Product Service on port 8082 [%SPRING_PROFILES_ACTIVE%]...
-    start "[ApexStore] Product Service (8082)" cmd /k "cd /d %ROOT_DIR% && color 0E && echo Starting Product Service... && mvnw.cmd -pl product-service spring-boot:run -Dspring-boot.run.profiles=%SPRING_PROFILES_ACTIVE%"
+    start "[ApexStore] Product Service (8082)" cmd /k "cd /d %ROOT_DIR% && color 0E && echo Starting Product Service... && mvnw.cmd -pl product-service spring-boot:run %EXTRA_JVM_ARGS%"
 )
 
 :: Check if Order Service (8083) is running
@@ -56,7 +62,7 @@ if %errorlevel% equ 0 (
     echo [SKIP] Order Service is already running on port 8083.
 ) else (
     echo [STARTING] Order Service on port 8083 [%SPRING_PROFILES_ACTIVE%]...
-    start "[ApexStore] Order Service (8083)" cmd /k "cd /d %ROOT_DIR% && color 0D && echo Starting Order Service... && mvnw.cmd -pl order-service spring-boot:run -Dspring-boot.run.profiles=%SPRING_PROFILES_ACTIVE%"
+    start "[ApexStore] Order Service (8083)" cmd /k "cd /d %ROOT_DIR% && color 0D && echo Starting Order Service... && mvnw.cmd -pl order-service spring-boot:run %EXTRA_JVM_ARGS%"
 )
 
 echo.

@@ -41,8 +41,18 @@ if (Test-Path $envFile) {
 }
 
 $activeProfile = [Environment]::GetEnvironmentVariable("SPRING_PROFILES_ACTIVE", "Process")
-if (-not $activeProfile) { $activeProfile = "prod" }
-$profileArg = "-Dspring-boot.run.profiles=$activeProfile"
+if (-not $activeProfile) { $activeProfile = "dev" }
+
+$dbHost = [Environment]::GetEnvironmentVariable("DB_HOST", "Process")
+if (-not $dbHost) { $dbHost = "localhost" }
+$dbPort = [Environment]::GetEnvironmentVariable("DB_PORT", "Process")
+if (-not $dbPort) { $dbPort = "3306" }
+$dbUser = [Environment]::GetEnvironmentVariable("DB_USER", "Process")
+if (-not $dbUser) { $dbUser = "root" }
+$dbPass = [Environment]::GetEnvironmentVariable("DB_PASSWORD", "Process")
+if (-not $dbPass) { $dbPass = "root" }
+
+$envPrefix = "set DB_HOST=$dbHost&& set DB_PORT=$dbPort&& set DB_USER=$dbUser&& set DB_PASSWORD=$dbPass&& set SPRING_PROFILES_ACTIVE=$activeProfile&&"
 
 Clear-Host
 Write-Host "==============================================================================" -ForegroundColor Cyan
@@ -51,9 +61,9 @@ Write-Host "====================================================================
 Write-Host " Active Profile: " -NoNewline
 Write-Host "$activeProfile" -ForegroundColor Yellow -NoNewline
 if ($activeProfile -eq "prod") {
-    Write-Host " (MySQL: localhost:3306)" -ForegroundColor DarkGray
+    Write-Host " (MySQL: $dbHost`:$dbPort)" -ForegroundColor DarkGray
 } else {
-    Write-Host " (H2 in-memory)" -ForegroundColor DarkGray
+    Write-Host " (Persistent File-based H2 in ./data/)" -ForegroundColor DarkGray
 }
 Write-Host ""
 
@@ -72,7 +82,7 @@ if (Is-PortInUse 8081) {
     Write-Badge "SKIP" "User Service" "Already listening on port 8081" -Color Yellow
 } else {
     Write-Badge "START" "User Service" "Launching on port 8081 [$activeProfile]..." -Color Green
-    Start-Process cmd.exe -ArgumentList "/k", "cd /d `"$rootDir`" && color 0A && title [ApexStore] User Service (8081) && .\mvnw.cmd -pl user-service spring-boot:run $profileArg"
+    Start-Process cmd.exe -ArgumentList "/k", "cd /d `"$rootDir`" && color 0A && title [ApexStore] User Service (8081) && $envPrefix .\mvnw.cmd -pl user-service spring-boot:run"
 }
 
 # 3. Product Service (8082)
@@ -80,7 +90,7 @@ if (Is-PortInUse 8082) {
     Write-Badge "SKIP" "Product Service" "Already listening on port 8082" -Color Yellow
 } else {
     Write-Badge "START" "Product Service" "Launching on port 8082 [$activeProfile]..." -Color Yellow
-    Start-Process cmd.exe -ArgumentList "/k", "cd /d `"$rootDir`" && color 0E && title [ApexStore] Product Service (8082) && .\mvnw.cmd -pl product-service spring-boot:run $profileArg"
+    Start-Process cmd.exe -ArgumentList "/k", "cd /d `"$rootDir`" && color 0E && title [ApexStore] Product Service (8082) && $envPrefix .\mvnw.cmd -pl product-service spring-boot:run"
 }
 
 # 4. Order Service (8083)
@@ -88,7 +98,7 @@ if (Is-PortInUse 8083) {
     Write-Badge "SKIP" "Order Service" "Already listening on port 8083" -Color Yellow
 } else {
     Write-Badge "START" "Order Service" "Launching on port 8083 [$activeProfile]..." -Color Magenta
-    Start-Process cmd.exe -ArgumentList "/k", "cd /d `"$rootDir`" && color 0D && title [ApexStore] Order Service (8083) && .\mvnw.cmd -pl order-service spring-boot:run $profileArg"
+    Start-Process cmd.exe -ArgumentList "/k", "cd /d `"$rootDir`" && color 0D && title [ApexStore] Order Service (8083) && $envPrefix .\mvnw.cmd -pl order-service spring-boot:run"
 }
 
 Write-Host "   Waiting 5s before launching API Gateway..." -ForegroundColor DarkGray

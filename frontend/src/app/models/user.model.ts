@@ -32,6 +32,7 @@ export interface User {
   address?: string;
   city?: string;
   postalCode?: string;
+  avatarUrl?: string;
   enabled: boolean;
   sellerProfile?: SellerProfile;
   createdAt?: string;
@@ -70,3 +71,29 @@ export interface SellerOnboardingRequest {
   logoUrl?: string;
   bannerUrl?: string;
 }
+
+export interface UpdateProfileRequest {
+  firstName: string;
+  lastName: string;
+  phoneNumber?: string;
+  address?: string;
+  city?: string;
+  postalCode?: string;
+  avatarUrl?: string;
+}
+
+export interface ChangePasswordRequest {
+  currentPassword: string;
+  newPassword: string;
+  confirmPassword: string;
+}
+
+export interface UpdateSellerProfileRequest {
+  storeName: string;
+  storeDescription?: string;
+  logoUrl?: string;
+  bannerUrl?: string;
+  businessRegistrationNumber?: string;
+  taxIdentificationNumber?: string;
+}
+

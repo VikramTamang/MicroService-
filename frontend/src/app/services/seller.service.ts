@@ -49,7 +49,27 @@ export class SellerService {
     return this.http.get<ApiResponse<User[]>>(`${this.GATEWAY_URL}/admin/customers`);
   }
 
+  getCustomerById(id: number): Observable<ApiResponse<User>> {
+    return this.http.get<ApiResponse<User>>(`${this.GATEWAY_URL}/admin/customers/${id}`);
+  }
+
+  createCustomer(request: any): Observable<ApiResponse<User>> {
+    return this.http.post<ApiResponse<User>>(`${this.GATEWAY_URL}/admin/customers`, request);
+  }
+
+  updateCustomer(id: number, request: any): Observable<ApiResponse<User>> {
+    return this.http.put<ApiResponse<User>>(`${this.GATEWAY_URL}/admin/customers/${id}`, request);
+  }
+
   updateUserStatus(userId: number, status: UserStatus, reason?: string): Observable<ApiResponse<User>> {
     return this.http.patch<ApiResponse<User>>(`${this.GATEWAY_URL}/admin/users/${userId}/status`, { status, reason });
+  }
+
+  resetUserPassword(userId: number, newPassword: string): Observable<ApiResponse<void>> {
+    return this.http.post<ApiResponse<void>>(`${this.GATEWAY_URL}/admin/users/${userId}/reset-password`, { newPassword });
+  }
+
+  deleteCustomer(userId: number): Observable<ApiResponse<void>> {
+    return this.http.delete<ApiResponse<void>>(`${this.GATEWAY_URL}/admin/customers/${userId}`);
   }
 }

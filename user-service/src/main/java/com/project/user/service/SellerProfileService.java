@@ -74,6 +74,32 @@ public class SellerProfileService {
                 .orElseThrow(() -> new ResourceNotFoundException("Seller profile not found for user: " + userId));
     }
 
+    @Transactional
+    public SellerProfileDto updateSellerProfile(Long userId, com.project.user.dto.UpdateSellerProfileRequest request) {
+        log.info("Updating seller profile for userId: {}", userId);
+        SellerProfile profile = sellerProfileRepository.findByUserId(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("Seller profile not found for user: " + userId));
+
+        if (!profile.getStoreName().equalsIgnoreCase(request.getStoreName().trim())) {
+            String newSlug = generateSlug(request.getStoreName());
+            if (sellerProfileRepository.existsByStoreSlug(newSlug) && !newSlug.equals(profile.getStoreSlug())) {
+                newSlug = newSlug + "-" + System.currentTimeMillis();
+            }
+            profile.setStoreName(request.getStoreName().trim());
+            profile.setStoreSlug(newSlug);
+        }
+
+        profile.setStoreDescription(request.getStoreDescription());
+        profile.setLogoUrl(request.getLogoUrl());
+        profile.setBannerUrl(request.getBannerUrl());
+        profile.setBusinessRegistrationNumber(request.getBusinessRegistrationNumber());
+        profile.setTaxIdentificationNumber(request.getTaxIdentificationNumber());
+
+        SellerProfile updated = sellerProfileRepository.save(profile);
+        log.info("Seller profile updated for userId={}: storeName={}", userId, updated.getStoreName());
+        return mapToDto(updated);
+    }
+
     @Transactional(readOnly = true)
     public SellerProfileDto getProfileById(Long id) {
         return sellerProfileRepository.findById(id)

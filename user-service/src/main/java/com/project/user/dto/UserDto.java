@@ -16,6 +16,7 @@ public class UserDto {
     private String address;
     private String city;
     private String postalCode;
+    private String avatarUrl;
     private boolean enabled;
     private SellerProfileDto sellerProfile;
     private LocalDateTime createdAt;
@@ -52,6 +53,9 @@ public class UserDto {
     public String getPostalCode() { return postalCode; }
     public void setPostalCode(String postalCode) { this.postalCode = postalCode; }
 
+    public String getAvatarUrl() { return avatarUrl; }
+    public void setAvatarUrl(String avatarUrl) { this.avatarUrl = avatarUrl; }
+
     public boolean isEnabled() { return enabled; }
     public void setEnabled(boolean enabled) { this.enabled = enabled; }
 
@@ -75,6 +79,7 @@ public class UserDto {
         public Builder address(String address) { dto.setAddress(address); return this; }
         public Builder city(String city) { dto.setCity(city); return this; }
         public Builder postalCode(String postalCode) { dto.setPostalCode(postalCode); return this; }
+        public Builder avatarUrl(String avatarUrl) { dto.setAvatarUrl(avatarUrl); return this; }
         public Builder enabled(boolean enabled) { dto.setEnabled(enabled); return this; }
         public Builder sellerProfile(SellerProfileDto sellerProfile) { dto.setSellerProfile(sellerProfile); return this; }
         public Builder createdAt(LocalDateTime createdAt) { dto.setCreatedAt(createdAt); return this; }

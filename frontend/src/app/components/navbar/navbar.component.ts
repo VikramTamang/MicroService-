@@ -1,4 +1,4 @@
-import { Component, inject } from '@angular/core';
+import { Component, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink, RouterLinkActive } from '@angular/router';
 import { AuthService } from '../../services/auth.service';
@@ -51,6 +51,10 @@ import { CartService } from '../../services/cart.service';
                 <a routerLink="/my-orders" routerLinkActive="text-emerald-400 bg-emerald-500/10" class="px-3.5 py-2 rounded-lg text-slate-300 hover:text-white hover:bg-slate-800/60 transition-all duration-200">
                   My Orders
                 </a>
+                <a routerLink="/profile" routerLinkActive="text-emerald-400 bg-emerald-500/10" class="px-3.5 py-2 rounded-lg text-slate-300 hover:text-white hover:bg-slate-800/60 transition-all duration-200 flex items-center space-x-1">
+                  <span>👤</span>
+                  <span>Profile</span>
+                </a>
               }
             } @else {
               <!-- Customer / Guest Navigation -->
@@ -60,6 +64,10 @@ import { CartService } from '../../services/cart.service';
               @if (authService.isAuthenticated()) {
                 <a routerLink="/my-orders" routerLinkActive="text-emerald-400 bg-emerald-500/10" class="px-3.5 py-2 rounded-lg text-slate-300 hover:text-white hover:bg-slate-800/60 transition-all duration-200">
                   My Orders
+                </a>
+                <a routerLink="/profile" routerLinkActive="text-emerald-400 bg-emerald-500/10" class="px-3.5 py-2 rounded-lg text-slate-300 hover:text-white hover:bg-slate-800/60 transition-all duration-200 flex items-center space-x-1">
+                  <span>👤</span>
+                  <span>Profile</span>
                 </a>
               }
             }
@@ -83,21 +91,32 @@ import { CartService } from '../../services/cart.service';
 
             <!-- User Auth Menu -->
             @if (authService.isAuthenticated()) {
-              <div class="flex items-center space-x-3 pl-2 border-l border-slate-800">
-                <div class="text-right hidden sm:block">
-                  <p class="text-xs font-semibold text-slate-200">{{ authService.userFullName() }}</p>
-                  <p class="text-[10px] font-medium">
-                    @if (authService.currentUser()?.role === 'ROLE_ADMIN') {
-                      <span class="text-purple-400 font-bold">🛡️ Administrator</span>
-                    } @else if (authService.currentUser()?.role === 'ROLE_SELLER') {
-                      <span class="text-cyan-400 font-semibold">🏪 {{ authService.sellerProfile()?.storeName || 'Merchant' }}</span>
+              <div class="flex items-center space-x-2.5 pl-2 border-l border-slate-800">
+                <a routerLink="/profile" class="flex items-center space-x-2.5 p-1 rounded-xl hover:bg-slate-800/60 border border-transparent hover:border-slate-700/60 transition-all duration-200 group" title="Account Settings & Profile">
+                  <div class="w-8 h-8 rounded-lg flex items-center justify-center font-bold text-xs shadow-sm group-hover:scale-105 transition-transform overflow-hidden relative border border-slate-700/60"
+                       [ngClass]="(!authService.currentUser()?.avatarUrl || avatarLoadFailed()) ? avatarColorClass() : 'bg-slate-900 text-white'">
+                    @if (authService.currentUser()?.avatarUrl && !avatarLoadFailed()) {
+                      <img [src]="authService.currentUser()?.avatarUrl" alt="Avatar" class="w-full h-full object-cover rounded-lg" (error)="onAvatarError()" />
                     } @else {
-                      <span class="text-emerald-400">👤 Customer</span>
+                      <span>{{ userInitials() }}</span>
                     }
-                  </p>
-                </div>
+                  </div>
+                  <div class="text-right hidden sm:block">
+                    <p class="text-xs font-semibold text-slate-200 group-hover:text-white transition-colors">{{ authService.userFullName() }}</p>
+                    <p class="text-[10px] font-medium leading-tight">
+                      @if (authService.currentUser()?.role === 'ROLE_ADMIN') {
+                        <span class="text-purple-400 font-bold">🛡️ Admin</span>
+                      } @else if (authService.currentUser()?.role === 'ROLE_SELLER') {
+                        <span class="text-cyan-400 font-semibold">🏪 {{ authService.sellerProfile()?.storeName || 'Merchant' }}</span>
+                      } @else {
+                        <span class="text-emerald-400">👤 Customer</span>
+                      }
+                    </p>
+                  </div>
+                </a>
+
                 <button (click)="authService.logout()" title="Sign Out" class="p-2 rounded-xl bg-slate-900 border border-slate-800 text-slate-400 hover:text-rose-400 hover:border-rose-500/30 transition-all duration-200">
-                  <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
                   </svg>
                 </button>
@@ -121,4 +140,36 @@ import { CartService } from '../../services/cart.service';
 export class NavbarComponent {
   authService = inject(AuthService);
   cartService = inject(CartService);
+
+  private avatarFailedUrl = signal<string | null>(null);
+
+  avatarLoadFailed(): boolean {
+    const url = this.authService.currentUser()?.avatarUrl;
+    if (!url) return false;
+    return this.avatarFailedUrl() === url;
+  }
+
+  onAvatarError(): void {
+    const url = this.authService.currentUser()?.avatarUrl;
+    if (url) {
+      this.avatarFailedUrl.set(url);
+    }
+  }
+
+  userInitials(): string {
+    const u = this.authService.currentUser();
+    if (!u) return 'U';
+    const first = u.firstName ? u.firstName.charAt(0).toUpperCase() : '';
+    const last = u.lastName ? u.lastName.charAt(0).toUpperCase() : '';
+    return `${first}${last}` || 'U';
+  }
+
+  avatarColorClass(): string {
+    const r = this.authService.currentUser()?.role;
+    if (r === 'ROLE_ADMIN') return 'bg-purple-600 text-white';
+    if (r === 'ROLE_SELLER') return 'bg-cyan-500 text-slate-950';
+    return 'bg-emerald-500 text-slate-950';
+  }
 }
+
+

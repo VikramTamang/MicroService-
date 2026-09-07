@@ -51,6 +51,20 @@ public class SellerController {
         return ResponseEntity.ok(ApiResponse.success(profile, "Seller profile retrieved successfully"));
     }
 
+    @PutMapping("/me")
+    @Operation(summary = "Update current seller store profile")
+    public ResponseEntity<ApiResponse<SellerProfileDto>> updateMyProfile(
+            @RequestHeader(value = "X-User-Id", required = false) Long authUserId,
+            @Valid @RequestBody com.project.user.dto.UpdateSellerProfileRequest request
+    ) {
+        if (authUserId == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(ApiResponse.failure("Authentication required"));
+        }
+        SellerProfileDto profile = sellerProfileService.updateSellerProfile(authUserId, request);
+        return ResponseEntity.ok(ApiResponse.success(profile, "Seller store profile updated successfully"));
+    }
+
     @GetMapping("/{id}")
     @Operation(summary = "Get public seller profile by ID")
     public ResponseEntity<ApiResponse<SellerProfileDto>> getSellerById(@PathVariable("id") Long id) {

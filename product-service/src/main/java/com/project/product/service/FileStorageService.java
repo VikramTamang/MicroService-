@@ -17,6 +17,8 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
@@ -37,13 +39,54 @@ public class FileStorageService {
     );
 
     public FileStorageService() {
-        this.uploadDir = Paths.get("uploads", "products").toAbsolutePath().normalize();
+        this.uploadDir = resolveUploadDir().toAbsolutePath().normalize();
         try {
             Files.createDirectories(this.uploadDir);
-            log.info("Initialized product image upload directory at: {}", this.uploadDir);
+            Path mirrorDir = getMirrorDir();
+            if (mirrorDir != null) {
+                Files.createDirectories(mirrorDir);
+            }
+            log.info("Initialized product image upload directory at: {} (mirror: {})", this.uploadDir, mirrorDir);
         } catch (IOException e) {
-            throw new RuntimeException("Could not initialize storage directory for product images", e);
+            log.error("Could not initialize storage directories for product images", e);
         }
+    }
+
+    private Path resolveUploadDir() {
+        Path cwd = Paths.get("").toAbsolutePath().normalize();
+        log.info("Resolving product image upload directory from cwd: {}", cwd);
+
+        // If cwd is the workspace root (contains product-service folder)
+        if (Files.exists(cwd.resolve("product-service")) && Files.isDirectory(cwd.resolve("product-service"))) {
+            return cwd.resolve("uploads").resolve("products");
+        }
+
+        // If cwd is product-service submodule directory
+        if (cwd.getFileName() != null && "product-service".equalsIgnoreCase(cwd.getFileName().toString()) && cwd.getParent() != null) {
+            return cwd.getParent().resolve("uploads").resolve("products");
+        }
+
+        // If parent has product-service directory
+        if (cwd.getParent() != null && Files.exists(cwd.getParent().resolve("product-service"))) {
+            return cwd.getParent().resolve("uploads").resolve("products");
+        }
+
+        return cwd.resolve("uploads").resolve("products");
+    }
+
+    private Path getMirrorDir() {
+        try {
+            if (this.uploadDir.getParent() != null) {
+                Path root = this.uploadDir.getParent().getParent();
+                if (root != null && Files.exists(root.resolve("product-service"))) {
+                    return root.resolve("product-service").resolve("uploads").resolve("products");
+                }
+                Path directSubmodule = this.uploadDir.getParent().resolve("product-service").resolve("uploads").resolve("products");
+                return directSubmodule;
+            }
+        } catch (Exception ignored) {
+        }
+        return null;
     }
 
     public String storeFile(MultipartFile file) {
@@ -74,6 +117,19 @@ public class FileStorageService {
         try {
             Path targetLocation = this.uploadDir.resolve(uniqueFilename);
             Files.copy(file.getInputStream(), targetLocation, StandardCopyOption.REPLACE_EXISTING);
+
+            // Mirror copy to submodule upload folder as well
+            try {
+                Path mirrorDir = getMirrorDir();
+                if (mirrorDir != null) {
+                    Files.createDirectories(mirrorDir);
+                    Path mirrorLocation = mirrorDir.resolve(uniqueFilename);
+                    Files.copy(targetLocation, mirrorLocation, StandardCopyOption.REPLACE_EXISTING);
+                }
+            } catch (Exception mirrorEx) {
+                log.debug("Mirror copy for product image skipped: {}", mirrorEx.getMessage());
+            }
+
             log.info("Stored product image successfully: {}", uniqueFilename);
 
             // Return URL accessible through API Gateway
@@ -86,33 +142,57 @@ public class FileStorageService {
     }
 
     public Resource loadFileAsResource(String filename) {
-        try {
-            Path filePath = this.uploadDir.resolve(filename).normalize();
-            if (!filePath.startsWith(this.uploadDir)) {
-                log.warn("Path traversal attempt detected with filename: {}", filename);
-                throw new BadRequestException("Invalid file path specified: " + filename);
-            }
-            Resource resource = new UrlResource(filePath.toUri());
-            if (resource.exists() && resource.isReadable()) {
-                return resource;
-            } else {
-                throw new ResourceNotFoundException("Image file not found: " + filename);
-            }
-        } catch (MalformedURLException ex) {
-            throw new ResourceNotFoundException("Image file not found: " + filename);
+        if (filename == null || filename.isBlank() || filename.contains("..") || filename.contains("/") || filename.contains("\\")) {
+            log.warn("Invalid or traversal filename requested: {}", filename);
+            throw new BadRequestException("Invalid file path specified: " + filename);
         }
+
+        List<Path> candidatePaths = new ArrayList<>();
+        candidatePaths.add(this.uploadDir.resolve(filename).normalize());
+
+        Path mirror = getMirrorDir();
+        if (mirror != null) {
+            candidatePaths.add(mirror.resolve(filename).normalize());
+        }
+
+        if (this.uploadDir.getParent() != null) {
+            candidatePaths.add(this.uploadDir.getParent().resolve("product-service").resolve("uploads").resolve("products").resolve(filename).normalize());
+            candidatePaths.add(this.uploadDir.getParent().resolve("uploads").resolve("products").resolve(filename).normalize());
+        }
+
+        Path cwd = Paths.get("").toAbsolutePath().normalize();
+        candidatePaths.add(cwd.resolve("uploads").resolve("products").resolve(filename).normalize());
+        candidatePaths.add(cwd.resolve("product-service").resolve("uploads").resolve("products").resolve(filename).normalize());
+        if (cwd.getParent() != null) {
+            candidatePaths.add(cwd.getParent().resolve("uploads").resolve("products").resolve(filename).normalize());
+            candidatePaths.add(cwd.getParent().resolve("product-service").resolve("uploads").resolve("products").resolve(filename).normalize());
+        }
+
+        for (Path path : candidatePaths) {
+            try {
+                if (Files.exists(path) && Files.isReadable(path)) {
+                    Resource resource = new UrlResource(path.toUri());
+                    if (resource.exists() && resource.isReadable()) {
+                        return resource;
+                    }
+                }
+            } catch (MalformedURLException ignored) {
+            }
+        }
+
+        log.warn("Product image file not found in any candidate path for filename: {}", filename);
+        throw new ResourceNotFoundException("Image file not found: " + filename);
     }
 
     public String getContentType(String filename) {
         try {
-            Path filePath = this.uploadDir.resolve(filename).normalize();
-            if (!filePath.startsWith(this.uploadDir)) {
-                return "application/octet-stream";
-            }
+            Resource res = loadFileAsResource(filename);
+            Path filePath = Paths.get(res.getURI());
             String mimeType = Files.probeContentType(filePath);
             return mimeType != null ? mimeType : "application/octet-stream";
-        } catch (IOException e) {
+        } catch (Exception e) {
             return "application/octet-stream";
         }
     }
 }
+

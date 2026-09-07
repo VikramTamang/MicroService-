@@ -96,7 +96,7 @@ public class ProductService {
                 .stockQuantity(request.getStockQuantity())
                 .category(category)
                 .imageUrl(request.getImageUrl())
-                .status(ProductStatus.PENDING_REVIEW)
+                .status(ProductStatus.ACTIVE)
                 .active(true)
                 .build();
 
@@ -107,14 +107,14 @@ public class ProductService {
                 .product(saved)
                 .actorId(sellerId)
                 .actorRole("ROLE_SELLER")
-                .action("SUBMIT_FOR_REVIEW")
+                .action("CREATE_PRODUCT")
                 .previousStatus(null)
-                .newStatus(ProductStatus.PENDING_REVIEW)
-                .reason("New product submitted for moderation")
+                .newStatus(ProductStatus.ACTIVE)
+                .reason("Product created and published")
                 .build();
         auditLogRepository.save(audit);
 
-        log.info("Seller {} submitted product for review: id={}, name={}", sellerId, saved.getId(), saved.getName());
+        log.info("Product created successfully: id={}, name={}, status=ACTIVE", saved.getId(), saved.getName());
         return mapToDto(saved);
     }
 

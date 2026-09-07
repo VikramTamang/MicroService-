@@ -73,6 +73,30 @@ public class AdminModerationController {
         return ResponseEntity.ok(ApiResponse.success(customers, "Customers retrieved successfully"));
     }
 
+    @GetMapping("/customers/{id}")
+    @Operation(summary = "Get customer details by ID (Admin)")
+    public ResponseEntity<ApiResponse<UserDto>> getCustomerById(@PathVariable("id") Long id) {
+        UserDto customer = userService.getUserById(id);
+        return ResponseEntity.ok(ApiResponse.success(customer, "Customer retrieved successfully"));
+    }
+
+    @PostMapping("/customers")
+    @Operation(summary = "Create a new customer account directly from admin console")
+    public ResponseEntity<ApiResponse<UserDto>> createCustomer(@Valid @RequestBody CreateCustomerAdminRequest request) {
+        UserDto created = userService.createCustomer(request);
+        return ResponseEntity.ok(ApiResponse.success(created, "Customer created successfully"));
+    }
+
+    @PutMapping("/customers/{id}")
+    @Operation(summary = "Update customer contact profile by ID (Admin)")
+    public ResponseEntity<ApiResponse<UserDto>> updateCustomer(
+            @PathVariable("id") Long id,
+            @Valid @RequestBody UpdateProfileRequest request
+    ) {
+        UserDto updated = userService.updateCustomerById(id, request);
+        return ResponseEntity.ok(ApiResponse.success(updated, "Customer updated successfully"));
+    }
+
     @PatchMapping("/users/{id}/status")
     @Operation(summary = "Suspend or reactivate a user account (Admin)")
     public ResponseEntity<ApiResponse<UserDto>> updateUserStatus(
@@ -81,5 +105,22 @@ public class AdminModerationController {
     ) {
         UserDto userDto = userService.updateUserStatus(id, request);
         return ResponseEntity.ok(ApiResponse.success(userDto, "User status updated successfully"));
+    }
+
+    @PostMapping("/users/{id}/reset-password")
+    @Operation(summary = "Reset a user password directly (Admin)")
+    public ResponseEntity<ApiResponse<Void>> resetPassword(
+            @PathVariable("id") Long id,
+            @Valid @RequestBody ResetPasswordAdminRequest request
+    ) {
+        userService.resetPasswordAdmin(id, request);
+        return ResponseEntity.ok(ApiResponse.success(null, "Password reset successfully"));
+    }
+
+    @DeleteMapping("/customers/{id}")
+    @Operation(summary = "Delete a customer account (Admin)")
+    public ResponseEntity<ApiResponse<Void>> deleteCustomer(@PathVariable("id") Long id) {
+        userService.deleteCustomer(id);
+        return ResponseEntity.ok(ApiResponse.success(null, "Customer account deleted successfully"));
     }
 }

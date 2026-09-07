@@ -14,6 +14,7 @@ public class UpdateProfileRequest {
     private String address;
     private String city;
     private String postalCode;
+    private String avatarUrl;
 
     public UpdateProfileRequest() {}
 
@@ -35,6 +36,9 @@ public class UpdateProfileRequest {
     public String getPostalCode() { return postalCode; }
     public void setPostalCode(String postalCode) { this.postalCode = postalCode; }
 
+    public String getAvatarUrl() { return avatarUrl; }
+    public void setAvatarUrl(String avatarUrl) { this.avatarUrl = avatarUrl; }
+
     public static Builder builder() { return new Builder(); }
 
     public static class Builder {
@@ -45,6 +49,7 @@ public class UpdateProfileRequest {
         public Builder address(String address) { req.setAddress(address); return this; }
         public Builder city(String city) { req.setCity(city); return this; }
         public Builder postalCode(String postalCode) { req.setPostalCode(postalCode); return this; }
+        public Builder avatarUrl(String avatarUrl) { req.setAvatarUrl(avatarUrl); return this; }
         public UpdateProfileRequest build() { return req; }
     }
 }

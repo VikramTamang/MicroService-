@@ -57,7 +57,7 @@ public class DataInitializer implements CommandLineRunner {
                 }
         );
 
-        // 2. Ensure Customer
+        // 2. Ensure Default Customers
         userRepository.findByEmail("customer@example.com").ifPresentOrElse(
                 customer -> {
                     customer.setPassword(passwordEncoder.encode("Password@123"));
@@ -82,6 +82,38 @@ public class DataInitializer implements CommandLineRunner {
                     log.info("Created default Customer account: customer@example.com");
                 }
         );
+
+        if (userRepository.findByEmail("sarah.jenkins@example.com").isEmpty()) {
+            User sarah = User.builder()
+                    .firstName("Sarah")
+                    .lastName("Jenkins")
+                    .email("sarah.jenkins@example.com")
+                    .password(passwordEncoder.encode("Password@123"))
+                    .role(Role.ROLE_CUSTOMER)
+                    .phoneNumber("+15552348912")
+                    .address("742 Evergreen Terrace")
+                    .city("Springfield")
+                    .postalCode("97477")
+                    .enabled(true)
+                    .build();
+            userRepository.save(sarah);
+        }
+
+        if (userRepository.findByEmail("mike.ross@example.com").isEmpty()) {
+            User mike = User.builder()
+                    .firstName("Mike")
+                    .lastName("Ross")
+                    .email("mike.ross@example.com")
+                    .password(passwordEncoder.encode("Password@123"))
+                    .role(Role.ROLE_CUSTOMER)
+                    .phoneNumber("+15559871234")
+                    .address("888 Broadway Suite 4B")
+                    .city("New York")
+                    .postalCode("10003")
+                    .enabled(true)
+                    .build();
+            userRepository.save(mike);
+        }
 
         // 3. Ensure Seller 1 (Apex TechStore)
         userRepository.findByEmail("seller1@example.com").ifPresentOrElse(

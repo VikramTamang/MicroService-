@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, OnInit, inject, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ProductService } from '../../services/product.service';
@@ -369,68 +369,166 @@ import { ParentOrder } from '../../models/order.model';
       <!-- TAB 4: CUSTOMER MANAGEMENT -->
       @if (activeTab === 'customer_management') {
         <div class="space-y-6">
-          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <!-- Customer Management Header & Controls -->
+          <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div>
-              <h3 class="text-lg font-bold text-white">Marketplace Customer Accounts</h3>
-              <p class="text-xs text-slate-400">Manage buyer accounts, review contact details, and suspend/reactivate accounts for trust & safety.</p>
+              <div class="flex items-center space-x-2">
+                <span class="text-xl">👥</span>
+                <h3 class="text-lg font-bold text-white font-['Outfit']">Marketplace Customer Accounts & Governance</h3>
+              </div>
+              <p class="text-xs text-slate-400 mt-1">Manage buyer accounts, inspect delivery destinations, reset credentials, review orders, and moderate account access.</p>
             </div>
-            <input 
-              type="text" 
-              [(ngModel)]="customerSearchQuery" 
-              placeholder="Search customers by name or email..." 
-              class="px-3.5 py-2 rounded-xl bg-slate-900 border border-slate-800 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-purple-500 max-w-xs w-full" />
+
+            <div class="flex items-center space-x-3">
+              <button (click)="openCreateCustomerModal()" class="px-4 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs shadow-lg shadow-purple-600/20 transition-all flex items-center space-x-1.5 cursor-pointer">
+                <span>➕</span>
+                <span>Add Customer</span>
+              </button>
+            </div>
           </div>
 
+          <!-- Customer Stats Banner -->
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div class="glass-card rounded-2xl p-4 border border-slate-800 flex items-center justify-between">
+              <div>
+                <p class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Total Customers</p>
+                <p class="text-2xl font-black text-white font-['Outfit']">{{ customers().length }}</p>
+              </div>
+              <span class="w-10 h-10 rounded-xl bg-purple-500/10 text-purple-400 flex items-center justify-center text-lg">👥</span>
+            </div>
+            <div class="glass-card rounded-2xl p-4 border border-slate-800 flex items-center justify-between">
+              <div>
+                <p class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Active Buyers</p>
+                <p class="text-2xl font-black text-emerald-400 font-['Outfit']">{{ activeCustomersCount() }}</p>
+              </div>
+              <span class="w-10 h-10 rounded-xl bg-emerald-500/10 text-emerald-400 flex items-center justify-center text-lg">✅</span>
+            </div>
+            <div class="glass-card rounded-2xl p-4 border border-slate-800 flex items-center justify-between">
+              <div>
+                <p class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Suspended Accounts</p>
+                <p class="text-2xl font-black text-rose-400 font-['Outfit']">{{ suspendedCustomersCount() }}</p>
+              </div>
+              <span class="w-10 h-10 rounded-xl bg-rose-500/10 text-rose-400 flex items-center justify-center text-lg">🚫</span>
+            </div>
+          </div>
+
+          <!-- Filter & Search Bar -->
+          <div class="flex flex-col sm:flex-row items-center justify-between gap-3 bg-slate-900/60 p-3 rounded-2xl border border-slate-800">
+            <div class="flex items-center space-x-1.5 overflow-x-auto w-full sm:w-auto">
+              <button (click)="customerStatusFilter = 'ALL'"
+                      [class]="customerStatusFilter === 'ALL' ? 'bg-purple-600 text-white font-bold' : 'text-slate-400 hover:text-white bg-slate-800/60'"
+                      class="px-3 py-1.5 rounded-lg text-xs transition-colors whitespace-nowrap cursor-pointer">
+                All ({{ customers().length }})
+              </button>
+              <button (click)="customerStatusFilter = 'ACTIVE'"
+                      [class]="customerStatusFilter === 'ACTIVE' ? 'bg-emerald-600 text-white font-bold' : 'text-slate-400 hover:text-white bg-slate-800/60'"
+                      class="px-3 py-1.5 rounded-lg text-xs transition-colors whitespace-nowrap cursor-pointer">
+                Active ({{ activeCustomersCount() }})
+              </button>
+              <button (click)="customerStatusFilter = 'SUSPENDED'"
+                      [class]="customerStatusFilter === 'SUSPENDED' ? 'bg-rose-600 text-white font-bold' : 'text-slate-400 hover:text-white bg-slate-800/60'"
+                      class="px-3 py-1.5 rounded-lg text-xs transition-colors whitespace-nowrap cursor-pointer">
+                Suspended ({{ suspendedCustomersCount() }})
+              </button>
+            </div>
+
+            <div class="w-full sm:w-72 relative">
+              <input 
+                type="text" 
+                [(ngModel)]="customerSearchQuery" 
+                placeholder="Search name, email, phone, city..." 
+                class="w-full px-3.5 py-1.5 rounded-xl bg-slate-950 border border-slate-800 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-purple-500 pl-8" />
+              <span class="absolute left-2.5 top-2 text-xs text-slate-500">🔍</span>
+            </div>
+          </div>
+
+          <!-- Customers Table -->
           <div class="glass-card rounded-3xl overflow-hidden border border-slate-800 shadow-xl">
             <div class="overflow-x-auto">
               <table class="w-full text-left text-xs text-slate-300">
                 <thead class="bg-slate-900/90 text-[11px] uppercase tracking-wider text-slate-400 border-b border-slate-800">
                   <tr>
-                    <th class="p-4">Customer ID</th>
-                    <th class="p-4">Name & Email</th>
-                    <th class="p-4">Phone</th>
-                    <th class="p-4">Address / City</th>
-                    <th class="p-4">Account Status</th>
-                    <th class="p-4 text-right">Actions</th>
+                    <th class="p-4">Customer</th>
+                    <th class="p-4">Contact & Location</th>
+                    <th class="p-4">Status</th>
+                    <th class="p-4">Marketplace Orders</th>
+                    <th class="p-4">Registered</th>
+                    <th class="p-4 text-right">Moderation Actions</th>
                   </tr>
                 </thead>
                 <tbody class="divide-y divide-slate-800/60">
                   @for (c of filteredCustomers(); track c.id) {
                     <tr class="hover:bg-slate-800/30 transition-colors">
-                      <td class="p-4 font-mono text-slate-500">#{{ c.id }}</td>
                       <td class="p-4">
-                        <span class="font-bold text-white block">{{ c.firstName }} {{ c.lastName }}</span>
-                        <span class="text-slate-400 text-[11px] font-mono">{{ c.email }}</span>
+                        <div class="flex items-center space-x-3">
+                          <div class="w-9 h-9 rounded-xl flex items-center justify-center font-bold text-xs overflow-hidden border border-slate-700/60 bg-gradient-to-tr from-emerald-600 to-teal-400 text-slate-950 flex-shrink-0">
+                            @if (c.avatarUrl && !isAvatarFailed(c.id)) {
+                              <img [src]="c.avatarUrl" alt="Avatar" class="w-full h-full object-cover" (error)="markAvatarFailed(c.id)" />
+                            } @else {
+                              <span>{{ getInitials(c.firstName, c.lastName) }}</span>
+                            }
+                          </div>
+                          <div>
+                            <span class="font-bold text-white block">{{ c.firstName }} {{ c.lastName }}</span>
+                            <span class="text-slate-400 text-[11px] font-mono">{{ c.email }}</span>
+                            <span class="text-slate-500 text-[10px] font-mono block">ID: #{{ c.id }}</span>
+                          </div>
+                        </div>
                       </td>
-                      <td class="p-4 text-slate-300">{{ c.phoneNumber || 'N/A' }}</td>
-                      <td class="p-4 text-slate-300">
-                        @if (c.city || c.address) {
-                          <span>{{ c.address }}, {{ c.city }} {{ c.postalCode }}</span>
-                        } @else {
-                          <span class="text-slate-500 italic">Not set</span>
-                        }
+                      <td class="p-4">
+                        <div class="space-y-0.5">
+                          <span class="text-slate-300 block font-mono">{{ c.phoneNumber || 'No phone set' }}</span>
+                          @if (c.city || c.address) {
+                            <span class="text-slate-400 text-[11px] block">{{ c.address ? c.address + ', ' : '' }}{{ c.city || '' }} {{ c.postalCode || '' }}</span>
+                          } @else {
+                            <span class="text-slate-500 text-[11px] italic block">Address not provided</span>
+                          }
+                        </div>
                       </td>
                       <td class="p-4">
                         <span [class]="c.status === 'ACTIVE' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30' : 'bg-rose-500/10 text-rose-400 border-rose-500/30'" class="px-2.5 py-0.5 rounded-full text-[10px] font-bold border">
                           {{ c.status }}
                         </span>
                       </td>
-                      <td class="p-4 text-right">
+                      <td class="p-4">
+                        <span class="px-2.5 py-1 rounded-lg bg-slate-800/80 text-slate-300 font-mono text-[11px] font-bold border border-slate-700/80 inline-flex items-center space-x-1">
+                          <span>📦</span>
+                          <span>{{ getCustomerOrderCount(c.email) }} Orders</span>
+                        </span>
+                      </td>
+                      <td class="p-4 text-slate-400 font-mono text-[11px]">
+                        {{ c.createdAt ? (c.createdAt | date:'mediumDate') : 'Sept 2026' }}
+                      </td>
+                      <td class="p-4 text-right space-x-1.5 whitespace-nowrap">
+                        <button (click)="inspectCustomer(c)" title="Inspect Profile & Orders" class="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition-colors cursor-pointer">
+                          👁️
+                        </button>
+                        <button (click)="openEditCustomerModal(c)" title="Edit Customer Details" class="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition-colors cursor-pointer">
+                          ✏️
+                        </button>
+                        <button (click)="openResetPasswordModal(c)" title="Reset Customer Password" class="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-amber-400 hover:text-amber-300 transition-colors cursor-pointer">
+                          🔑
+                        </button>
                         @if (c.status === 'ACTIVE') {
-                          <button (click)="toggleCustomerStatus(c.id, 'SUSPENDED')" class="px-3 py-1.5 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/30 font-bold text-xs transition-colors">
-                            Suspend Account
+                          <button (click)="toggleCustomerStatus(c.id, 'SUSPENDED')" title="Suspend Account" class="px-2.5 py-1.5 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/30 font-bold text-xs transition-colors cursor-pointer">
+                            🚫 Suspend
                           </button>
                         } @else {
-                          <button (click)="toggleCustomerStatus(c.id, 'ACTIVE')" class="px-3 py-1.5 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 font-bold text-xs transition-colors">
-                            Reactivate
+                          <button (click)="toggleCustomerStatus(c.id, 'ACTIVE')" title="Reactivate Account" class="px-2.5 py-1.5 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 font-bold text-xs transition-colors cursor-pointer">
+                            🟢 Activate
                           </button>
                         }
+                        <button (click)="deleteCustomer(c)" title="Delete Account" class="p-1.5 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 hover:text-rose-300 border border-rose-500/30 transition-colors cursor-pointer">
+                          🗑️
+                        </button>
                       </td>
                     </tr>
                   }
                   @if (filteredCustomers().length === 0) {
                     <tr>
-                      <td colspan="6" class="p-12 text-center text-slate-500">No customer accounts match your search.</td>
+                      <td colspan="6" class="p-12 text-center text-slate-500">
+                        No customer accounts found matching your filter criteria.
+                      </td>
                     </tr>
                   }
                 </tbody>
@@ -550,6 +648,220 @@ import { ParentOrder } from '../../models/order.model';
           </div>
         </div>
       }
+      <!-- Customer Inspection Modal -->
+      @if (inspectingCustomer()) {
+        <div class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4">
+          <div class="glass-card rounded-3xl p-6 sm:p-8 max-w-2xl w-full border border-slate-700 space-y-6 shadow-2xl max-h-[90vh] overflow-y-auto">
+            <div class="flex items-start justify-between border-b border-slate-800 pb-4">
+              <div class="flex items-center space-x-4">
+                <div class="w-14 h-14 rounded-2xl flex items-center justify-center font-black font-['Outfit'] text-lg overflow-hidden border-2 border-slate-700 bg-gradient-to-tr from-emerald-600 to-teal-400 text-slate-950">
+                  @if (inspectingCustomer()?.avatarUrl) {
+                    <img [src]="inspectingCustomer()?.avatarUrl" alt="Avatar" class="w-full h-full object-cover" />
+                  } @else {
+                    <span>{{ getInitials(inspectingCustomer()?.firstName || '', inspectingCustomer()?.lastName || '') }}</span>
+                  }
+                </div>
+                <div>
+                  <div class="flex items-center space-x-2">
+                    <h3 class="text-lg font-bold text-white font-['Outfit']">{{ inspectingCustomer()?.firstName }} {{ inspectingCustomer()?.lastName }}</h3>
+                    <span [class]="inspectingCustomer()?.status === 'ACTIVE' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30' : 'bg-rose-500/10 text-rose-400 border-rose-500/30'" class="px-2.5 py-0.5 rounded-full text-[10px] font-bold border">
+                      {{ inspectingCustomer()?.status }}
+                    </span>
+                  </div>
+                  <p class="text-xs text-slate-400 font-mono mt-0.5">{{ inspectingCustomer()?.email }}</p>
+                </div>
+              </div>
+              <button (click)="inspectingCustomer.set(null)" class="text-slate-400 hover:text-white text-xl font-bold cursor-pointer">&times;</button>
+            </div>
+
+            <!-- Profile Info Grid -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
+              <div class="p-3.5 bg-slate-900/80 rounded-2xl border border-slate-800 space-y-1">
+                <span class="text-slate-500 uppercase text-[10px] font-bold">Contact Phone</span>
+                <p class="font-mono text-slate-200 text-sm">{{ inspectingCustomer()?.phoneNumber || 'Not provided' }}</p>
+              </div>
+              <div class="p-3.5 bg-slate-900/80 rounded-2xl border border-slate-800 space-y-1">
+                <span class="text-slate-500 uppercase text-[10px] font-bold">Member Since</span>
+                <p class="text-slate-200 text-sm">{{ inspectingCustomer()?.createdAt ? (inspectingCustomer()?.createdAt | date:'mediumDate') : 'Sept 2026' }}</p>
+              </div>
+              <div class="sm:col-span-2 p-3.5 bg-slate-900/80 rounded-2xl border border-slate-800 space-y-1">
+                <span class="text-slate-500 uppercase text-[10px] font-bold">Default Delivery Destination</span>
+                <p class="text-slate-200 text-sm">
+                  @if (inspectingCustomer()?.address || inspectingCustomer()?.city) {
+                    <span>{{ inspectingCustomer()?.address }}, {{ inspectingCustomer()?.city }} {{ inspectingCustomer()?.postalCode }}</span>
+                  } @else {
+                    <span class="text-slate-500 italic">No delivery address registered</span>
+                  }
+                </p>
+              </div>
+            </div>
+
+            <!-- Customer Orders History -->
+            <div class="space-y-3">
+              <h4 class="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center justify-between">
+                <span>Recent Orders ({{ getCustomerOrders(inspectingCustomer()?.email || '').length }})</span>
+                <span class="text-[11px] text-emerald-400 font-mono font-normal">
+                  Total Spent: \${{ getCustomerTotalSpent(inspectingCustomer()?.email || '') }}
+                </span>
+              </h4>
+
+              <div class="space-y-2 max-h-48 overflow-y-auto">
+                @for (ord of getCustomerOrders(inspectingCustomer()?.email || ''); track ord.id) {
+                  <div class="p-3 bg-slate-900/90 rounded-xl border border-slate-800 flex items-center justify-between text-xs">
+                    <div>
+                      <span class="font-mono font-bold text-emerald-400">{{ ord.orderNumber }}</span>
+                      <span class="text-slate-500 ml-2 text-[11px]">{{ ord.createdAt | date:'shortDate' }}</span>
+                    </div>
+                    <div class="flex items-center space-x-3">
+                      <span class="font-bold text-white font-['Outfit']">\${{ ord.totalAmount.toFixed(2) }}</span>
+                      <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-indigo-500/10 text-indigo-400 border border-indigo-500/30">
+                        {{ ord.derivedStatus }}
+                      </span>
+                    </div>
+                  </div>
+                }
+                @if (getCustomerOrders(inspectingCustomer()?.email || '').length === 0) {
+                  <div class="p-4 rounded-xl bg-slate-900/40 border border-slate-800 text-center text-slate-500 text-xs">
+                    This customer has not placed any marketplace orders yet.
+                  </div>
+                }
+              </div>
+            </div>
+
+            <div class="flex items-center justify-between pt-4 border-t border-slate-800">
+              <div class="space-x-2">
+                @if (inspectingCustomer()?.status === 'ACTIVE') {
+                  <button (click)="toggleCustomerStatus(inspectingCustomer()!.id, 'SUSPENDED'); inspectingCustomer.set(null)" class="px-3 py-1.5 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/30 text-xs font-bold transition-colors cursor-pointer">
+                    🚫 Suspend Account
+                  </button>
+                } @else {
+                  <button (click)="toggleCustomerStatus(inspectingCustomer()!.id, 'ACTIVE'); inspectingCustomer.set(null)" class="px-3 py-1.5 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-xs font-bold transition-colors cursor-pointer">
+                    🟢 Reactivate Account
+                  </button>
+                }
+              </div>
+              <button (click)="inspectingCustomer.set(null)" class="px-4 py-2 rounded-xl bg-slate-800 text-slate-300 hover:text-white text-xs font-semibold cursor-pointer">
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      }
+
+      <!-- Create / Edit Customer Modal -->
+      @if (customerModalOpen()) {
+        <div class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4">
+          <div class="glass-card rounded-3xl p-6 sm:p-8 max-w-lg w-full border border-slate-700 space-y-5 shadow-2xl">
+            <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+              <h3 class="text-base font-bold text-white font-['Outfit']">
+                {{ customerModalMode() === 'create' ? '➕ Create Customer Account' : '✏️ Edit Customer Profile' }}
+              </h3>
+              <button (click)="customerModalOpen.set(false)" class="text-slate-400 hover:text-white text-lg cursor-pointer">&times;</button>
+            </div>
+
+            <form (ngSubmit)="saveCustomer()" class="space-y-4">
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                <div>
+                  <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1">First Name</label>
+                  <input type="text" [(ngModel)]="customerForm.firstName" name="firstName" required
+                         class="w-full px-3.5 py-2 rounded-xl bg-slate-900 border border-slate-800 text-white text-xs focus:outline-none focus:border-purple-500"
+                         placeholder="e.g. Sarah" />
+                </div>
+                <div>
+                  <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1">Last Name</label>
+                  <input type="text" [(ngModel)]="customerForm.lastName" name="lastName" required
+                         class="w-full px-3.5 py-2 rounded-xl bg-slate-900 border border-slate-800 text-white text-xs focus:outline-none focus:border-purple-500"
+                         placeholder="e.g. Jenkins" />
+                </div>
+
+                <div [class]="customerModalMode() === 'create' ? 'sm:col-span-1' : 'sm:col-span-2'">
+                  <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1">Email Address</label>
+                  <input type="email" [(ngModel)]="customerForm.email" name="email" required [disabled]="customerModalMode() === 'edit'"
+                         class="w-full px-3.5 py-2 rounded-xl bg-slate-900 border border-slate-800 text-white text-xs focus:outline-none focus:border-purple-500 disabled:opacity-50 font-mono"
+                         placeholder="e.g. sarah@example.com" />
+                </div>
+
+                @if (customerModalMode() === 'create') {
+                  <div>
+                    <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1">Password</label>
+                    <input type="password" [(ngModel)]="customerForm.password" name="password" required minlength="6"
+                           class="w-full px-3.5 py-2 rounded-xl bg-slate-900 border border-slate-800 text-white text-xs focus:outline-none focus:border-purple-500"
+                           placeholder="••••••••••••" />
+                  </div>
+                }
+
+                <div class="sm:col-span-2">
+                  <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1">Phone Number</label>
+                  <input type="text" [(ngModel)]="customerForm.phoneNumber" name="phoneNumber"
+                         class="w-full px-3.5 py-2 rounded-xl bg-slate-900 border border-slate-800 text-white text-xs focus:outline-none focus:border-purple-500"
+                         placeholder="e.g. +1 555 234 8912" />
+                </div>
+
+                <div class="sm:col-span-2">
+                  <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1">Street Address</label>
+                  <input type="text" [(ngModel)]="customerForm.address" name="address"
+                         class="w-full px-3.5 py-2 rounded-xl bg-slate-900 border border-slate-800 text-white text-xs focus:outline-none focus:border-purple-500"
+                         placeholder="e.g. 742 Evergreen Terrace" />
+                </div>
+
+                <div>
+                  <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1">City</label>
+                  <input type="text" [(ngModel)]="customerForm.city" name="city"
+                         class="w-full px-3.5 py-2 rounded-xl bg-slate-900 border border-slate-800 text-white text-xs focus:outline-none focus:border-purple-500"
+                         placeholder="e.g. Springfield" />
+                </div>
+
+                <div>
+                  <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1">Postal / Zip Code</label>
+                  <input type="text" [(ngModel)]="customerForm.postalCode" name="postalCode"
+                         class="w-full px-3.5 py-2 rounded-xl bg-slate-900 border border-slate-800 text-white text-xs focus:outline-none focus:border-purple-500"
+                         placeholder="e.g. 97477" />
+                </div>
+              </div>
+
+              <div class="flex items-center justify-end space-x-2 pt-3 border-t border-slate-800">
+                <button type="button" (click)="customerModalOpen.set(false)" class="px-3.5 py-2 rounded-xl bg-slate-800 text-slate-300 text-xs font-semibold cursor-pointer">Cancel</button>
+                <button type="submit" [disabled]="savingCustomer()" class="px-5 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs shadow-md shadow-purple-600/20 disabled:opacity-50 cursor-pointer">
+                  {{ savingCustomer() ? 'Saving...' : (customerModalMode() === 'create' ? 'Create Customer' : 'Save Changes') }}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      }
+
+      <!-- Reset Password Modal -->
+      @if (resettingPasswordUser()) {
+        <div class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4">
+          <div class="glass-card rounded-3xl p-6 max-w-md w-full border border-slate-700 space-y-4 shadow-2xl">
+            <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+              <h3 class="text-base font-bold text-white font-['Outfit']">🔑 Reset Password</h3>
+              <button (click)="resettingPasswordUser.set(null)" class="text-slate-400 hover:text-white text-lg cursor-pointer">&times;</button>
+            </div>
+
+            <p class="text-xs text-slate-400">
+              Reset account credentials for <strong class="text-white">{{ resettingPasswordUser()?.firstName }} {{ resettingPasswordUser()?.lastName }}</strong> ({{ resettingPasswordUser()?.email }}).
+            </p>
+
+            <div class="space-y-2">
+              <div class="flex items-center justify-between">
+                <label class="text-[11px] font-bold text-slate-300 uppercase tracking-wider">New Password</label>
+                <button type="button" (click)="generateRandomPassword()" class="text-[10px] text-purple-400 hover:text-purple-300 font-semibold cursor-pointer">
+                  🎲 Generate Password
+                </button>
+              </div>
+              <input type="text" [(ngModel)]="newCustomerPassword" placeholder="Enter new password (min 6 chars)" class="w-full px-3.5 py-2 rounded-xl bg-slate-900 border border-slate-800 text-white font-mono text-xs focus:outline-none focus:border-purple-500" />
+            </div>
+
+            <div class="flex items-center justify-end space-x-2 pt-2 border-t border-slate-800">
+              <button (click)="resettingPasswordUser.set(null)" class="px-3.5 py-1.5 rounded-xl bg-slate-800 text-slate-300 text-xs font-semibold cursor-pointer">Cancel</button>
+              <button (click)="submitResetPassword()" [disabled]="!newCustomerPassword || newCustomerPassword.length < 6" class="px-4 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs shadow-md shadow-amber-500/20 disabled:opacity-50 cursor-pointer">
+                Update Password
+              </button>
+            </div>
+          </div>
+        </div>
+      }
     </div>
   `
 })
@@ -570,6 +882,31 @@ export class AdminDashboardComponent implements OnInit {
 
   searchQuery = '';
   customerSearchQuery = '';
+  customerStatusFilter: 'ALL' | 'ACTIVE' | 'SUSPENDED' = 'ALL';
+
+  activeCustomersCount = computed(() => this.customers().filter(c => c.status === 'ACTIVE').length);
+  suspendedCustomersCount = computed(() => this.customers().filter(c => c.status === 'SUSPENDED').length);
+
+  // Customer inspector & modal states
+  inspectingCustomer = signal<User | null>(null);
+  customerModalOpen = signal<boolean>(false);
+  customerModalMode = signal<'create' | 'edit'>('create');
+  savingCustomer = signal<boolean>(false);
+
+  customerForm = {
+    id: 0,
+    firstName: '',
+    lastName: '',
+    email: '',
+    password: '',
+    phoneNumber: '',
+    address: '',
+    city: '',
+    postalCode: ''
+  };
+
+  resettingPasswordUser = signal<User | null>(null);
+  newCustomerPassword = '';
 
   rejectingProductId = signal<number | null>(null);
   rejectionReason = '';
@@ -631,13 +968,165 @@ export class AdminDashboardComponent implements OnInit {
 
   filteredCustomers(): User[] {
     const q = this.customerSearchQuery.trim().toLowerCase();
-    if (!q) return this.customers();
-    return this.customers().filter(c => 
-      c.firstName.toLowerCase().includes(q) ||
-      c.lastName.toLowerCase().includes(q) ||
-      c.email.toLowerCase().includes(q) ||
+    let list = this.customers();
+    if (this.customerStatusFilter !== 'ALL') {
+      list = list.filter(c => c.status === this.customerStatusFilter);
+    }
+    if (!q) return list;
+    return list.filter(c => 
+      (c.firstName && c.firstName.toLowerCase().includes(q)) ||
+      (c.lastName && c.lastName.toLowerCase().includes(q)) ||
+      (c.email && c.email.toLowerCase().includes(q)) ||
+      (c.phoneNumber && c.phoneNumber.toLowerCase().includes(q)) ||
+      (c.city && c.city.toLowerCase().includes(q)) ||
       c.id.toString().includes(q)
     );
+  }
+
+  getCustomerOrderCount(email: string): number {
+    if (!email) return 0;
+    return this.platformOrders().filter(o => o.customerEmail?.toLowerCase() === email.toLowerCase()).length;
+  }
+
+  getCustomerOrders(email: string): ParentOrder[] {
+    if (!email) return [];
+    return this.platformOrders().filter(o => o.customerEmail?.toLowerCase() === email.toLowerCase());
+  }
+
+  getCustomerTotalSpent(email: string): string {
+    const orders = this.getCustomerOrders(email);
+    const total = orders.reduce((sum, o) => sum + (o.totalAmount || 0), 0);
+    return total.toFixed(2);
+  }
+
+  getInitials(first: string, last: string): string {
+    const f = first ? first.charAt(0) : '';
+    const l = last ? last.charAt(0) : '';
+    return `${f}${l}`.toUpperCase() || 'U';
+  }
+
+  inspectCustomer(c: User): void {
+    this.inspectingCustomer.set(c);
+  }
+
+  openCreateCustomerModal(): void {
+    this.customerModalMode.set('create');
+    this.customerForm = {
+      id: 0,
+      firstName: '',
+      lastName: '',
+      email: '',
+      password: '',
+      phoneNumber: '',
+      address: '',
+      city: '',
+      postalCode: ''
+    };
+    this.customerModalOpen.set(true);
+  }
+
+  openEditCustomerModal(c: User): void {
+    this.customerModalMode.set('edit');
+    this.customerForm = {
+      id: c.id,
+      firstName: c.firstName,
+      lastName: c.lastName,
+      email: c.email,
+      password: '',
+      phoneNumber: c.phoneNumber || '',
+      address: c.address || '',
+      city: c.city || '',
+      postalCode: c.postalCode || ''
+    };
+    this.customerModalOpen.set(true);
+  }
+
+  saveCustomer(): void {
+    this.savingCustomer.set(true);
+
+    if (this.customerModalMode() === 'create') {
+      this.sellerService.createCustomer(this.customerForm).subscribe({
+        next: (res) => {
+          this.savingCustomer.set(false);
+          this.customerModalOpen.set(false);
+          this.alertMessage.set(`Customer account for ${this.customerForm.email} created successfully!`);
+          this.loadData();
+        },
+        error: (err) => {
+          this.savingCustomer.set(false);
+          const msg = err.error?.message || 'Failed to create customer';
+          alert(msg);
+        }
+      });
+    } else {
+      const updateReq = {
+        firstName: this.customerForm.firstName,
+        lastName: this.customerForm.lastName,
+        phoneNumber: this.customerForm.phoneNumber,
+        address: this.customerForm.address,
+        city: this.customerForm.city,
+        postalCode: this.customerForm.postalCode
+      };
+
+      this.sellerService.updateCustomer(this.customerForm.id, updateReq).subscribe({
+        next: (res) => {
+          this.savingCustomer.set(false);
+          this.customerModalOpen.set(false);
+          this.alertMessage.set(`Customer #${this.customerForm.id} updated successfully!`);
+          this.loadData();
+        },
+        error: (err) => {
+          this.savingCustomer.set(false);
+          const msg = err.error?.message || 'Failed to update customer';
+          alert(msg);
+        }
+      });
+    }
+  }
+
+  openResetPasswordModal(c: User): void {
+    this.resettingPasswordUser.set(c);
+    this.newCustomerPassword = '';
+  }
+
+  generateRandomPassword(): void {
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789!@#$%';
+    let pass = '';
+    for (let i = 0; i < 10; i++) {
+      pass += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    this.newCustomerPassword = pass;
+  }
+
+  submitResetPassword(): void {
+    const user = this.resettingPasswordUser();
+    if (!user || !this.newCustomerPassword) return;
+
+    this.sellerService.resetUserPassword(user.id, this.newCustomerPassword).subscribe({
+      next: () => {
+        this.alertMessage.set(`Password for ${user.email} was reset successfully to: ${this.newCustomerPassword}`);
+        this.resettingPasswordUser.set(null);
+      },
+      error: (err) => {
+        const msg = err.error?.message || 'Failed to reset password';
+        alert(msg);
+      }
+    });
+  }
+
+  deleteCustomer(c: User): void {
+    if (confirm(`Are you sure you want to permanently delete customer ${c.firstName} ${c.lastName} (${c.email})? This action cannot be undone.`)) {
+      this.sellerService.deleteCustomer(c.id).subscribe({
+        next: () => {
+          this.alertMessage.set(`Customer #${c.id} was permanently deleted.`);
+          this.loadData();
+        },
+        error: (err) => {
+          const msg = err.error?.message || 'Failed to delete customer';
+          alert(msg);
+        }
+      });
+    }
   }
 
   toggleCustomerStatus(userId: number, newStatus: UserStatus): void {
@@ -731,6 +1220,18 @@ export class AdminDashboardComponent implements OnInit {
     });
   }
 
+  failedAvatarUserIds = signal<Set<number>>(new Set());
+
+  isAvatarFailed(userId: number): boolean {
+    return this.failedAvatarUserIds().has(userId);
+  }
+
+  markAvatarFailed(userId: number): void {
+    const updated = new Set(this.failedAvatarUserIds());
+    updated.add(userId);
+    this.failedAvatarUserIds.set(updated);
+  }
+
   getSellerStatusClass(status: string): string {
     switch (status) {
       case 'APPROVED': return 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30';
@@ -752,4 +1253,5 @@ export class AdminDashboardComponent implements OnInit {
     }
   }
 }
+
 

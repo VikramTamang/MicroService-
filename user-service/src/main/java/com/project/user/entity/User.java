@@ -40,6 +40,7 @@ public class User {
     private String address;
     private String city;
     private String postalCode;
+    private String avatarUrl;
 
     private boolean enabled = true;
 
@@ -92,6 +93,9 @@ public class User {
     public String getPostalCode() { return postalCode; }
     public void setPostalCode(String postalCode) { this.postalCode = postalCode; }
 
+    public String getAvatarUrl() { return avatarUrl; }
+    public void setAvatarUrl(String avatarUrl) { this.avatarUrl = avatarUrl; }
+
     public boolean isEnabled() { return enabled; }
     public void setEnabled(boolean enabled) { this.enabled = enabled; }
 
@@ -125,6 +129,7 @@ public class User {
         public Builder address(String address) { user.setAddress(address); return this; }
         public Builder city(String city) { user.setCity(city); return this; }
         public Builder postalCode(String postalCode) { user.setPostalCode(postalCode); return this; }
+        public Builder avatarUrl(String avatarUrl) { user.setAvatarUrl(avatarUrl); return this; }
         public Builder enabled(boolean enabled) { user.setEnabled(enabled); return this; }
         public Builder sellerProfile(SellerProfile sellerProfile) { user.setSellerProfile(sellerProfile); return this; }
         public Builder failedLoginAttempts(Integer failedLoginAttempts) { user.setFailedLoginAttempts(failedLoginAttempts); return this; }

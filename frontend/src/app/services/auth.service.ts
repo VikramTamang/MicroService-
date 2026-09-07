@@ -13,6 +13,7 @@ export class AuthService {
   private router = inject(Router);
 
   private readonly API_URL = 'http://localhost:8080/api/v1/auth';
+  private readonly USER_PROFILE_URL = 'http://localhost:8080/api/v1/users/profile';
   private readonly TOKEN_KEY = 'apex_auth_token';
   private readonly USER_KEY = 'apex_auth_user';
 
@@ -28,6 +29,28 @@ export class AuthService {
     const u = this.currentUser();
     return u ? `${u.firstName} ${u.lastName}` : '';
   });
+
+  constructor() {
+    if (this.token()) {
+      this.refreshProfile();
+    }
+  }
+
+  refreshProfile(): void {
+    if (!this.token()) return;
+    this.http.get<ApiResponse<User>>(this.USER_PROFILE_URL).subscribe({
+      next: (res) => {
+        if (res.success && res.data) {
+          this.updateStoredUser(res.data);
+        }
+      },
+      error: (err) => {
+        if (err.status === 401 || err.status === 403) {
+          this.logout();
+        }
+      }
+    });
+  }
 
   register(request: RegisterRequest): Observable<ApiResponse<AuthResponse>> {
     return this.http.post<ApiResponse<AuthResponse>>(`${this.API_URL}/register`, request).pipe(
@@ -64,6 +87,11 @@ export class AuthService {
     this.currentUser.set(authData.user);
   }
 
+  updateStoredUser(user: User): void {
+    localStorage.setItem(this.USER_KEY, JSON.stringify(user));
+    this.currentUser.set(user);
+  }
+
   private getStoredToken(): string | null {
     return localStorage.getItem(this.TOKEN_KEY);
   }
@@ -78,3 +106,4 @@ export class AuthService {
     }
   }
 }
+
